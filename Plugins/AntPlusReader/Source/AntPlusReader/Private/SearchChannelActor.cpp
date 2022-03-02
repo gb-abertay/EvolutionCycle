@@ -169,14 +169,17 @@ bool ASearchChannelActor::Search(int DevType)
     if (!IsUSBConnected)
         return false;
 
-    if (ResetChannel())
-        return false;
-
     FoundChannels.Empty();
     IsSearching = true;
     SearchType = SaveSlotTranslator(DevType);
 
     (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject, SearchType))->StartBackgroundTask();
+
+    if (!ResetChannel())
+    {
+        IsSearching = false;
+        return false;
+    }
 
     return true;
 }
@@ -754,7 +757,6 @@ void WaitForMessagesTask::DoWork()
     UE_LOG(LogTemp, Warning, TEXT("Thread Started"))
     while (temp)
     {
-        UE_LOG(LogTemp, Warning, TEXT("looped"))
         ANT_MESSAGE stMessage;
         USHORT usSize;
 
@@ -772,9 +774,9 @@ void WaitForMessagesTask::DoWork()
             else if (usSize != DSI_FRAMER_TIMEDOUT && usSize != 0)
             {
                 SearchChannelActor->ProcessMessage(stMessage, usSize, DeviceType);
+                UE_LOG(LogTemp, Warning, TEXT("processing messages"));
             }
         }
         temp = SearchChannelActor->GetIsSearching();
-        UE_LOG(LogTemp, Warning, TEXT("temp = %i"), temp);
     }
 }
