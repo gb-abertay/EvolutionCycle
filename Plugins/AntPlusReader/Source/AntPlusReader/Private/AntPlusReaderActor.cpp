@@ -113,6 +113,8 @@ void AAntPlusReaderActor::Quit()
 
 bool AAntPlusReaderActor::SetChannelID(int DevID, int DevType, int TransType, DSISerialGeneric* pclSO, DSIFramerANT* pclMO)
 {
+    UE_LOG(LogTemp, Warning, TEXT("Initialising Channel ID and required pointers to run"));
+
     DeviceNumber = DevID;
     DeviceType = DevType;
     TransmissionType = TransType;
