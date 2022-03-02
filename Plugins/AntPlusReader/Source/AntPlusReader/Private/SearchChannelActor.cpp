@@ -750,8 +750,11 @@ WaitForMessagesTask::~WaitForMessagesTask()
 
 void WaitForMessagesTask::DoWork()
 {
-    while (SearchChannelActor->GetIsSearching())
+    bool temp = true;
+    UE_LOG(LogTemp, Warning, TEXT("Thread Started"))
+    while (temp)
     {
+        UE_LOG(LogTemp, Warning, TEXT("looped"))
         ANT_MESSAGE stMessage;
         USHORT usSize;
 
@@ -763,7 +766,7 @@ void WaitForMessagesTask::DoWork()
             {
                 // Get the message to clear the error
                 usSize = pclMessageObject->GetMessage(&stMessage, MESG_MAX_SIZE_VALUE);
-                break;
+                UE_LOG(LogTemp, Warning, TEXT("thread error"));
             }
 
             else if (usSize != DSI_FRAMER_TIMEDOUT && usSize != 0)
@@ -771,5 +774,7 @@ void WaitForMessagesTask::DoWork()
                 SearchChannelActor->ProcessMessage(stMessage, usSize, DeviceType);
             }
         }
+        temp = SearchChannelActor->GetIsSearching();
+        UE_LOG(LogTemp, Warning, TEXT("temp = %i"), temp);
     }
 }
