@@ -43,7 +43,7 @@ public:
 
     bool SetChannelID(int DevID, int DevType, int TransType, DSISerialGeneric* pclSO, DSIFramerANT* pclMO);
 
-    void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_);
+    void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, int DeviceType);
 
 private:
     
@@ -92,7 +92,7 @@ class WaitForMessagesTask2 : public FNonAbandonableTask
 {
 public:
 
-    WaitForMessagesTask2(DSIFramerANT* pclMsgObj);
+    WaitForMessagesTask2(AAntPlusReaderActor* APRActor, DSIFramerANT* pclMsgObj, int DevType);
     ~WaitForMessagesTask2();
 
     FORCEINLINE TStatId GetStatId() const
@@ -105,5 +105,5 @@ public:
 private:
     AAntPlusReaderActor* AntPlusReaderActor;
     DSIFramerANT* pclMessageObject;
-    bool* USBConnected;
+    int DeviceType;
 };

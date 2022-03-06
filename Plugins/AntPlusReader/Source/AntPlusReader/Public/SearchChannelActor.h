@@ -70,10 +70,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UMG")
         void ClearChannelID(int DevType);
 
-    UFUNCTION(BlueprintCallable, Category = "UMG")
-        bool SpawnActor(int DevID, int DevType, int TransType);
+    //UFUNCTION(BlueprintCallable, Category = "UMG")
+    //    bool SpawnActor(int DevID, int DevType, int TransType);
 
-    bool SpawnActor(int i);
+    //bool SpawnActor(int i);
+
+     UFUNCTION(BlueprintCallable, Category = "UMG")
+        bool CreateChannel(int DevID, int DevType, int TransType);
+
+    bool CreateChannel(int i);
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int SearchType;

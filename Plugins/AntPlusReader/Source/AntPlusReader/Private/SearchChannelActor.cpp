@@ -115,7 +115,7 @@ void ASearchChannelActor::BeginPlay()
                 UE_LOG(LogTemp, Warning, TEXT("Save for device found in slot %i, attempting to load"), i);
 
                 //Code for creating channel
-                SpawnActor(i);
+                CreateChannel(i);
             }
         }
     }
@@ -199,8 +199,23 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
     {
         case MESG_RESPONSE_EVENT_ID:
         {
-            switch (stMessage.aucData[1])
+
+            int channelNum = 0;
+            switch (stMessage.aucData[0])
             {
+            case 0:
+                channelNum = 0;
+                break;
+            case 1:
+                channelNum = 1;
+                break;
+            case 2:
+                channelNum = 2;
+                break;
+            }
+
+                switch (stMessage.aucData[1])
+                {
 
                 case MESG_NETWORK_KEY_ID: //Config Messages (Set Network Key)
                 {
@@ -209,9 +224,10 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                         UE_LOG(LogTemp, Warning, TEXT("Error configuring network key: Code 0%d"), stMessage.aucData[2]);
                         break;
                     }
+
                     UE_LOG(LogTemp, Warning, TEXT("Network key set."));
                     UE_LOG(LogTemp, Warning, TEXT("Assigning channel..."));
-                    bStatus = pclMessageObject->AssignChannel(USER_ANTCHANNEL, 0, 0, MESSAGE_TIMEOUT);
+                    bStatus = pclMessageObject->AssignChannel(channelNum, 0, 0, MESSAGE_TIMEOUT);
                     break;
                 }
 
@@ -224,7 +240,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Channel assigned"));
                     UE_LOG(LogTemp, Warning, TEXT("Setting Channel ID..."));
-                    bStatus = pclMessageObject->SetChannelID(USER_ANTCHANNEL, DeviceNumber[DevType], DeviceType[DevType], TransmissionType[DevType], MESSAGE_TIMEOUT);
+                    bStatus = pclMessageObject->SetChannelID(channelNum, DeviceNumber[DevType], DeviceType[DevType], TransmissionType[DevType], MESSAGE_TIMEOUT);
                     break;
                 }
 
@@ -237,7 +253,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Channel ID set"));
                     UE_LOG(LogTemp, Warning, TEXT("Setting Radio Frequency..."));
-                    bStatus = pclMessageObject->SetChannelRFFrequency(USER_ANTCHANNEL, USER_RADIOFREQ, MESSAGE_TIMEOUT);
+                    bStatus = pclMessageObject->SetChannelRFFrequency(channelNum, USER_RADIOFREQ, MESSAGE_TIMEOUT);
                     break;
                 }
 
@@ -250,7 +266,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Radio Frequency set"));
                     UE_LOG(LogTemp, Warning, TEXT("Setting Channel Period..."));
-                    bStatus = pclMessageObject->SetChannelPeriod(USER_ANTCHANNEL, 8182, MESSAGE_TIMEOUT);
+                    bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8182, MESSAGE_TIMEOUT);
                     break;
                 }
 
@@ -264,7 +280,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     UE_LOG(LogTemp, Warning, TEXT("Channel Period set"));
                     UE_LOG(LogTemp, Warning, TEXT("Opening channel..."));
                     bBroadcasting = TRUE;
-                    bStatus = pclMessageObject->OpenChannel(USER_ANTCHANNEL, MESSAGE_TIMEOUT);
+                    bStatus = pclMessageObject->OpenChannel(channelNum, MESSAGE_TIMEOUT);
                     break;
                 }
 
@@ -278,10 +294,10 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Channel opened"));
 
-    #if defined (ENABLE_EXTENDED_MESSAGES)
+#if defined (ENABLE_EXTENDED_MESSAGES)
                     UE_LOG(LogTemp, Warning, TEXT("Enabling extended messages..."));
                     pclMessageObject->SetLibConfig(ANT_LIB_CONFIG_MESG_OUT_INC_TIME_STAMP | ANT_LIB_CONFIG_MESG_OUT_INC_DEVICE_ID, MESSAGE_TIMEOUT);
-    #endif
+#endif
                     break;
                 }
 
@@ -320,7 +336,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                         // We get here if we tried to close the channel after the search timeout (slave)
                         UE_LOG(LogTemp, Warning, TEXT("Channel is already closed"));
                         UE_LOG(LogTemp, Warning, TEXT("Unassigning channel..."));
-                        bStatus = pclMessageObject->UnAssignChannel(USER_ANTCHANNEL, MESSAGE_TIMEOUT);
+                        bStatus = pclMessageObject->UnAssignChannel(channelNum, MESSAGE_TIMEOUT);
                         break;
                     }
                     else if (stMessage.aucData[2] != RESPONSE_NO_ERROR)
@@ -355,7 +371,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                         than the RESPONSE_NO_ERROR message to let a channel state machine continue.*/
                         UE_LOG(LogTemp, Warning, TEXT("Channel Closed"));
                         UE_LOG(LogTemp, Warning, TEXT("Unassigning channel..."));
-                        bStatus = pclMessageObject->UnAssignChannel(USER_ANTCHANNEL, MESSAGE_TIMEOUT);
+                        bStatus = pclMessageObject->UnAssignChannel(channelNum, MESSAGE_TIMEOUT);
                         break;
                     }
 
@@ -374,14 +390,14 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                         // the next message period.
                         if (bBroadcasting)
                         {
-                            pclMessageObject->SendBroadcastData(USER_ANTCHANNEL, aucTransmitBuffer);
+                            pclMessageObject->SendBroadcastData(channelNum, aucTransmitBuffer);
 
                             // Echo what the data will be over the air on the next message period.
                             if (bDisplay)
                             {
                                 UE_LOG(LogTemp, Warning, TEXT("Echo what the data will be over the air on the next message period."));
                                 UE_LOG(LogTemp, Warning, TEXT("Tx:(%d): [%02x],[%02x],[%02x],[%02x],[%02x],[%02x],[%02x],[%02x]"),
-                                    USER_ANTCHANNEL,
+                                    channelNum,
                                     aucTransmitBuffer[MESSAGE_BUFFER_DATA1_INDEX],
                                     aucTransmitBuffer[MESSAGE_BUFFER_DATA2_INDEX],
                                     aucTransmitBuffer[MESSAGE_BUFFER_DATA3_INDEX],
@@ -484,29 +500,28 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     break;
                 }
 
-            }
-
+                }
         }
 
         case MESG_STARTUP_MESG_ID: //Notifications (Start-up Messsage)
         {
-            UE_LOG(LogTemp, Warning, TEXT("RESET Complete, reason: "));
+            //UE_LOG(LogTemp, Warning, TEXT("RESET Complete, reason: "));
 
-            UCHAR ucReason = stMessage.aucData[MESSAGE_BUFFER_DATA1_INDEX];
+            //UCHAR ucReason = stMessage.aucData[MESSAGE_BUFFER_DATA1_INDEX];
 
-            if (ucReason == RESET_POR)
-                UE_LOG(LogTemp, Warning, TEXT("RESET_POR"));
-            if (ucReason & RESET_SUSPEND)
-                UE_LOG(LogTemp, Warning, TEXT("RESET_SUSPEND "));
-            if (ucReason & RESET_SYNC)
-                UE_LOG(LogTemp, Warning, TEXT("RESET_SYNC "));
-            if (ucReason & RESET_CMD)
-                UE_LOG(LogTemp, Warning, TEXT("RESET_CMD "));
-            if (ucReason & RESET_WDT)
-                UE_LOG(LogTemp, Warning, TEXT("RESET_WDT "));
-            if (ucReason & RESET_RST)
-                UE_LOG(LogTemp, Warning, TEXT("RESET_RST "));
-            UE_LOG(LogTemp, Warning, TEXT(""));
+            //if (ucReason == RESET_POR)
+            //    UE_LOG(LogTemp, Warning, TEXT("RESET_POR"));
+            //if (ucReason & RESET_SUSPEND)
+            //    UE_LOG(LogTemp, Warning, TEXT("RESET_SUSPEND "));
+            //if (ucReason & RESET_SYNC)
+            //    UE_LOG(LogTemp, Warning, TEXT("RESET_SYNC "));
+            //if (ucReason & RESET_CMD)
+            //    UE_LOG(LogTemp, Warning, TEXT("RESET_CMD "));
+            //if (ucReason & RESET_WDT)
+            //    UE_LOG(LogTemp, Warning, TEXT("RESET_WDT "));
+            //if (ucReason & RESET_RST)
+            //    UE_LOG(LogTemp, Warning, TEXT("RESET_RST "));
+            //UE_LOG(LogTemp, Warning, TEXT(""));
 
             break;
         }
@@ -525,11 +540,16 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     int usDeviceNumber = stMessage.aucData[MESSAGE_BUFFER_DATA11_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA12_INDEX] << 8);
                     int ucDeviceType = stMessage.aucData[MESSAGE_BUFFER_DATA13_INDEX];
                     int ucTransmissionType = stMessage.aucData[MESSAGE_BUFFER_DATA14_INDEX];
-
-                    if (IsNewDevice(usDeviceNumber, ucDeviceType, ucTransmissionType))
+                    switch (stMessage.aucData[0])
                     {
-                        FoundChannels.Push(FChannelID{ usDeviceNumber,ucDeviceType,ucTransmissionType });
+                    case 0:
+                        if (IsNewDevice(usDeviceNumber, ucDeviceType, ucTransmissionType))
+                        {
+                            FoundChannels.Push(FChannelID{ usDeviceNumber,ucDeviceType,ucTransmissionType });
+                        }
+                        break;
                     }
+
 
                     UE_LOG(LogTemp, Warning, TEXT("Chan ID(%i/%i/%i) - "), usDeviceNumber, ucDeviceType, ucTransmissionType);
                 }
@@ -545,10 +565,14 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
             USHORT usDeviceNumber = stMessage.aucData[MESSAGE_BUFFER_DATA2_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA3_INDEX] << 8);
             UCHAR ucDeviceType = stMessage.aucData[MESSAGE_BUFFER_DATA4_INDEX];
             UCHAR ucTransmissionType = stMessage.aucData[MESSAGE_BUFFER_DATA5_INDEX];
-
-            if (IsNewDevice(usDeviceNumber, ucDeviceType, ucTransmissionType))
+            switch (stMessage.aucData[0])
             {
-                FoundChannels.Push(FChannelID{ usDeviceNumber,ucDeviceType,ucTransmissionType });
+            case 0:
+                if (IsNewDevice(usDeviceNumber, ucDeviceType, ucTransmissionType))
+                {
+                    FoundChannels.Push(FChannelID{ usDeviceNumber,ucDeviceType,ucTransmissionType });
+                }
+                break;
             }
 
             // Display the channel id
@@ -602,58 +626,100 @@ void ASearchChannelActor::ClearChannelID(int DevType)
     }
 }
 
-bool ASearchChannelActor::SpawnActor(int DevID, int DevType, int TransType)
+//bool ASearchChannelActor::SpawnActor(int DevID, int DevType, int TransType)
+//{
+//    bool status;
+//
+//    switch (SaveSlotTranslator(DevType))
+//    {
+//    case 0:
+//        SpawnPowerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
+//        status = SpawnPowerReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
+//        break;
+//    case 1:
+//        SpawnTrainerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
+//        status = SpawnTrainerReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
+//        break;
+//    case 2:
+//        SpawnHeartReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
+//        status = SpawnHeartReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
+//        break;
+//    }
+//
+//    if (!status)
+//    {
+//        return false;
+//    }
+//    return true;
+//}
+
+bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
 {
-    bool status;
+    BOOL bStatus;
 
-    switch (SaveSlotTranslator(DevType))
+    int type = SaveSlotTranslator(DevType) + 1;
+
+    bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
+    DeviceNumber[type - 1] = DevID;
+    TransmissionType[type - 1] = TransType;
+
+    if (bStatus)
     {
-    case 0:
-        SpawnPowerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-        status = SpawnPowerReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
-        break;
-    case 1:
-        SpawnTrainerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-        status = SpawnTrainerReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
-        break;
-    case 2:
-        SpawnHeartReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-        status = SpawnHeartReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
-        break;
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
+        return true;
     }
-
-    if (!status)
+    else
     {
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
         return false;
     }
-    return true;
 }
 
-bool ASearchChannelActor::SpawnActor(int i)
+//bool ASearchChannelActor::SpawnActor(int i)
+//{
+//    bool status;
+//
+//    switch (i)
+//    {
+//    case 0:
+//        SpawnPowerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
+//        status = SpawnPowerReaderActor->SetChannelID(DeviceNumber[0], DeviceType[0], DeviceType[0], pclSerialObject, pclMessageObject);
+//        break;
+//    case 1:
+//        SpawnTrainerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
+//        status = SpawnTrainerReaderActor->SetChannelID(DeviceNumber[1], DeviceType[1], DeviceType[1], pclSerialObject, pclMessageObject);
+//        break;
+//    case 2:
+//        SpawnHeartReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
+//        status = SpawnHeartReaderActor->SetChannelID(DeviceNumber[2], DeviceType[2], DeviceType[2], pclSerialObject, pclMessageObject);
+//        break;
+//    }
+//
+//    if (!status)
+//    {
+//        return false;
+//    }
+//    return true;
+//}
+
+bool ASearchChannelActor::CreateChannel(int i)
 {
-    bool status;
+    BOOL bStatus;
 
-    switch (i)
+    int type = i + 1;
+
+    bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
+
+    if (bStatus)
     {
-    case 0:
-        SpawnPowerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-        status = SpawnPowerReaderActor->SetChannelID(DeviceNumber[0], DeviceType[0], DeviceType[0], pclSerialObject, pclMessageObject);
-        break;
-    case 1:
-        SpawnTrainerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-        status = SpawnTrainerReaderActor->SetChannelID(DeviceNumber[1], DeviceType[1], DeviceType[1], pclSerialObject, pclMessageObject);
-        break;
-    case 2:
-        SpawnHeartReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-        status = SpawnHeartReaderActor->SetChannelID(DeviceNumber[2], DeviceType[2], DeviceType[2], pclSerialObject, pclMessageObject);
-        break;
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
+        return true;
     }
-
-    if (!status)
+    else
     {
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
         return false;
     }
-    return true;
 }
 
 bool ASearchChannelActor::ResetChannel()
@@ -753,9 +819,8 @@ WaitForMessagesTask::~WaitForMessagesTask()
 
 void WaitForMessagesTask::DoWork()
 {
-    bool temp = true;
     UE_LOG(LogTemp, Warning, TEXT("Thread Started"))
-    while (temp)
+    while (true)
     {
         ANT_MESSAGE stMessage;
         USHORT usSize;
@@ -774,9 +839,7 @@ void WaitForMessagesTask::DoWork()
             else if (usSize != DSI_FRAMER_TIMEDOUT && usSize != 0)
             {
                 SearchChannelActor->ProcessMessage(stMessage, usSize, DeviceType);
-                UE_LOG(LogTemp, Warning, TEXT("processing messages"));
             }
         }
-        temp = SearchChannelActor->GetIsSearching();
     }
 }
