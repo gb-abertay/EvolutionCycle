@@ -83,6 +83,8 @@ void ASearchChannelActor::BeginPlay()
     ulNewEventTime = 0;
     usPreviousEventTime = 0;
     memset(aucTransmitBuffer, 0, ANT_STANDARD_DATA_PAYLOAD_SIZE);
+    bPowerDecoderInitialized = FALSE;
+    SetPowerMeterType(17);
 
     //USB set up values
 
@@ -98,7 +100,7 @@ void ASearchChannelActor::BeginPlay()
     DeviceType[2] = 120;
     TransmissionType[2] = 0;
 
-    LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
+    //LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
 
     SearchType = -1;
     NewConnection = -1;
@@ -601,6 +603,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                                 PowerBalanceReceiver(dRxTimeTePs, fPowerBalance, bPowerBalanceRightPedalIndicator);
                             }
                         }
+                        break;
                     }
 
 
@@ -711,6 +714,8 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     BOOL bStatus;
 
     int type = SaveSlotTranslator(DevType) + 1;
+
+    pclMessageObject->CloseChannel(0, MESSAGE_TIMEOUT);
 
     bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
     DeviceNumber[type - 1] = DevID;
