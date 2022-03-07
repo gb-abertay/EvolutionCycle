@@ -11,7 +11,6 @@
 #define CHANNEL_TYPE_SLAVE		(1)
 #define CHANNEL_TYPE_INVALID	(2)
 
-#include "AntPlusReaderActor.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "SearchChannelActor.generated.h"
@@ -132,10 +131,6 @@ private:
 
     //Receiver for Power Balance data
     void PowerBalanceReceiver(double dRxTime_, float fPowerBalance_, bool bPowerBalanceRightPedalIndicator_);
-
-    AAntPlusReaderActor* SpawnPowerReaderActor;
-    AAntPlusReaderActor* SpawnTrainerReaderActor;
-    AAntPlusReaderActor* SpawnHeartReaderActor;
 
     BOOL bBroadcasting;
     BOOL bPowerDecoderInitialized;

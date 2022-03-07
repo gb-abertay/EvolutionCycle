@@ -133,8 +133,8 @@ void ASearchChannelActor::Tick(float DeltaTime)
 
     if (PowerConnected)
     {
-        AveragePower = APower;
-        AverageCadence = ACadence;
+        AveragePower = APower/2;
+        AverageCadence = ACadence/2;
     }
 }
 
