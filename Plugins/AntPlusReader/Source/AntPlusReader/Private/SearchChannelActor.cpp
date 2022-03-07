@@ -22,6 +22,9 @@ extern "C" {
 #include <time.h>
 #include <algorithm>
 
+int APower;
+int ACadence;
+
 #define ENABLE_EXTENDED_MESSAGES
 
 #define USER_BAUDRATE         (50000)  // For AT3/AP2, use 57600
@@ -125,6 +128,12 @@ void ASearchChannelActor::BeginPlay()
 void ASearchChannelActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+    if (PowerConnected)
+    {
+        AveragePower = APower;
+        AverageCadence = ACadence;
+    }
 }
 
 bool ASearchChannelActor::SetUpUSB()
@@ -294,6 +303,14 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Channel opened"));
 
+                    if (stMessage.aucData[0] == 1)
+                    {
+                        // We register the power record receiver and initialize the bike power decoders after the channel has opened
+                        InitPowerDecoder(1, 0, 10, RecordReceiver); //dRecordInterval, dTimeBase, dReSyncInterval, RecordReceiver
+                        bPowerDecoderInitialized = TRUE;
+                        UE_LOG(LogTemp, Warning, TEXT("APR: Power record decode library initialized"));
+                    }
+
 #if defined (ENABLE_EXTENDED_MESSAGES)
                     UE_LOG(LogTemp, Warning, TEXT("Enabling extended messages..."));
                     pclMessageObject->SetLibConfig(ANT_LIB_CONFIG_MESG_OUT_INC_TIME_STAMP | ANT_LIB_CONFIG_MESG_OUT_INC_DEVICE_ID, MESSAGE_TIMEOUT);
@@ -392,29 +409,11 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                         {
                             pclMessageObject->SendBroadcastData(channelNum, aucTransmitBuffer);
 
-                            // Echo what the data will be over the air on the next message period.
-                            if (bDisplay)
-                            {
-                                UE_LOG(LogTemp, Warning, TEXT("Echo what the data will be over the air on the next message period."));
-                                UE_LOG(LogTemp, Warning, TEXT("Tx:(%d): [%02x],[%02x],[%02x],[%02x],[%02x],[%02x],[%02x],[%02x]"),
-                                    channelNum,
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA1_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA2_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA3_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA4_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA5_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA6_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA7_INDEX],
-                                    aucTransmitBuffer[MESSAGE_BUFFER_DATA8_INDEX]);
-                            }
-                            else
-                            {
-                                static int iIndex = 0;
-                                static char ac[] = { '|', '/', '-', '\\' };
-                                UE_LOG(LogTemp, Warning, TEXT("Tx: %c\r"), ac[iIndex++]);
-                                fflush(stdout);
-                                iIndex &= 3;
-                            }
+                            static int iIndex = 0;
+                            static char ac[] = { '|', '/', '-', '\\' };
+                            UE_LOG(LogTemp, Warning, TEXT("Tx: %c\r"), ac[iIndex++]);
+                            fflush(stdout);
+                            iIndex &= 3;
                         }
                         break;
                     }
@@ -548,6 +547,60 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                             FoundChannels.Push(FChannelID{ usDeviceNumber,ucDeviceType,ucTransmissionType });
                         }
                         break;
+
+                    case 1:
+                        // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
+                        time_t currentRxTime = time(NULL);
+                        if (currentRxTime - previousRxTime >= 2)
+                        {
+                            ulNewEventTime += (currentRxTime - previousRxTime) / 2 * 32768;
+                        }
+                        previousRxTime = currentRxTime;
+
+                        unsigned short usCurrentEventTime = stMessage.aucData[MESSAGE_BUFFER_DATA15_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA16_INDEX] << 8);
+                        unsigned short usDeltaEventTime = usCurrentEventTime - usPreviousEventTime;
+                        ulNewEventTime += usDeltaEventTime;
+                        usPreviousEventTime = usCurrentEventTime;
+                        UE_LOG(LogTemp, Warning, TEXT("APR: %f-"), (double)ulNewEventTime / 32768);
+
+                        // NOTE: In this example we use the incoming message timestamp as it typically has the most accuracy
+                        // NOTE: The library will handle the received time discrepancy caused by power only event count linked messages
+                        if (bPowerDecoderInitialized)
+                        {
+                            DecodePowerMessage((double)ulNewEventTime / 32768, &stMessage.aucData[ucDataOffset]);
+                        }
+
+                        // NOTE: We must compensate for the power only event count/rx time discrepance here, because the library does not decode Te/Ps
+                        // The torque effectiveness/pedal smoothness page is tied to the power only page and vice versa,
+                        // so both pages share the same "received time" depending on which page was received first and if the event count updated.
+                        if (stMessage.aucData[ucDataOffset] == ANT_TEPS || stMessage.aucData[ucDataOffset] == ANT_POWERONLY)
+                        {
+                            UCHAR ucNewPowerOnlyUpdateEventCount = stMessage.aucData[ucDataOffset + 1];
+
+                            if (ucNewPowerOnlyUpdateEventCount != ucPowerOnlyUpdateEventCount)
+                            {
+                                ucPowerOnlyUpdateEventCount = ucNewPowerOnlyUpdateEventCount;
+                                dRxTimeTePs = (double)ulNewEventTime / 32768;
+                            }
+
+                            if (stMessage.aucData[ucDataOffset] == ANT_TEPS)
+                            {
+                                // NOTE: Any value greater than 200 or 100% should be considered "INVALID"
+                                FLOAT fLeftTorqueEffectiveness = (float)stMessage.aucData[ucDataOffset + 2] / 2;
+                                FLOAT fRightTorqueEffectiveness = (float)stMessage.aucData[ucDataOffset + 3] / 2;
+                                FLOAT fLeftOrCombPedalSmoothness = (float)stMessage.aucData[ucDataOffset + 4] / 2;
+                                FLOAT fRightPedalSmoothness = (float)stMessage.aucData[ucDataOffset + 4] / 2;
+                                TePsReceiver(dRxTimeTePs, fLeftTorqueEffectiveness, fRightTorqueEffectiveness, fLeftOrCombPedalSmoothness, fRightPedalSmoothness);
+                            }
+                            else
+                            {
+                                // NOTE: Power only is a separate data stream containing similar power data compared to torque data pages but containing pedal power balance
+                                // On power only sensors, it would be valuable to average power balance between generated records
+                                FLOAT fPowerBalance = (float)(0x7F & stMessage.aucData[ucDataOffset + 2]);
+                                BOOL bPowerBalanceRightPedalIndicator = (0x80 & stMessage.aucData[ucDataOffset + 2]) != 0;
+                                PowerBalanceReceiver(dRxTimeTePs, fPowerBalance, bPowerBalanceRightPedalIndicator);
+                            }
+                        }
                     }
 
 
@@ -661,16 +714,17 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
 
     bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
     DeviceNumber[type - 1] = DevID;
+    DeviceType[type - 1] = DevType;
     TransmissionType[type - 1] = TransType;
 
     if (bStatus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
         return true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
         return false;
     }
 }
@@ -712,12 +766,12 @@ bool ASearchChannelActor::CreateChannel(int i)
 
     if (bStatus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
         return true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber, DeviceType, TransmissionType);
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
         return false;
     }
 }
@@ -800,6 +854,31 @@ bool ASearchChannelActor::IsNewDevice(int DevNum, int DevType, int TransType)
         return false;
     NewDevice = true;
     return true;
+}
+
+void ASearchChannelActor::RecordReceiver(double dLastRecordTime_, double dTotalRotation_, double dTotalEnergy_, float fAverageCadence_, float fAveragePower_)
+{
+    //Handle new records from power recording library.
+    UE_LOG(LogTemp, Warning, TEXT("APR: %lf, %lf, %lf, %f, %f"),
+        dLastRecordTime_, dTotalRotation_, dTotalEnergy_, fAverageCadence_, fAveragePower_);
+
+    APower = fAveragePower_;
+
+    ACadence = fAverageCadence_;
+}
+
+void ASearchChannelActor::TePsReceiver(double dRxTime_, float fLeftTorqEff_, float fRightTorqEff_, float fLeftOrCPedSmth_, float fRightPedSmth_)
+{
+    //Handle new torque effectivenessand pedal smoothness data page.
+    UE_LOG(LogTemp, Warning, TEXT("APR: RxTime,LTE,RTE,LCPS,RPS,%f, %f, %f, %f, %f"),
+        dRxTime_, fLeftTorqEff_, fRightTorqEff_, fLeftOrCPedSmth_, fRightPedSmth_);
+}
+
+void ASearchChannelActor::PowerBalanceReceiver(double dRxTime_, float fPowerBalance_, bool bPowerBalanceRightPedalIndicator_)
+{
+    //Handle power balance from power only data page.
+    UE_LOG(LogTemp, Warning, TEXT("APR: RxTime,PwrBal,RightPedal,%f, %f, %d"),
+        dRxTime_, fPowerBalance_, bPowerBalanceRightPedalIndicator_);
 }
 
 //==============================================

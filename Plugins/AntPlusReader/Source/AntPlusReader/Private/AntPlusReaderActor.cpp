@@ -21,8 +21,8 @@ extern "C" {
 #include <string.h>
 #include <time.h>
 
-int APower;
-int ACadence;
+//int APower;
+//int ACadence;
 
 #define ENABLE_EXTENDED_MESSAGES
 
@@ -99,8 +99,8 @@ void AAntPlusReaderActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-    AveragePower = APower;
-    AverageCadence = ACadence;
+    //AveragePower = APower;
+    //AverageCadence = ACadence;
 }
 
 // Quit
@@ -740,9 +740,9 @@ void AAntPlusReaderActor::RecordReceiver(double dLastRecordTime_, double dTotalR
     UE_LOG(LogTemp, Warning, TEXT("APR: %lf, %lf, %lf, %f, %f"),
         dLastRecordTime_, dTotalRotation_, dTotalEnergy_, fAverageCadence_, fAveragePower_);
 
-    APower = fAveragePower_;
+    //APower = fAveragePower_;
 
-    ACadence = fAverageCadence_;
+    //ACadence = fAverageCadence_;
 }
 
 void AAntPlusReaderActor::TePsReceiver(double dRxTime_, float fLeftTorqEff_, float fRightTorqEff_, float fLeftOrCPedSmth_, float fRightPedSmth_)

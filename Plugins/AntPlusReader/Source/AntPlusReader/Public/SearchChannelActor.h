@@ -110,6 +110,12 @@ public:
     UPROPERTY(EditAnywhere);
         TSubclassOf<AActor> ActorToSpawn;
 
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+        int AveragePower;
+
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+        int AverageCadence;
+
 private:
 
     bool ResetChannel();
@@ -118,17 +124,29 @@ private:
     int SaveSlotTranslator(int DevType);
     bool IsNewDevice(int DevNum, int DevType, int TransType);
 
+    //Receiver for the power records from the power decoder
+    static void RecordReceiver(double dLastRecordTime_, double dTotalRotation_, double dTotalEnergy_, float fAverageCadence_, float fAveragePower_);
+
+    //Receiver for Torque Effectiveness/Pedal Smoothness data
+    void TePsReceiver(double dRxTime_, float fLeftTorqEff_, float fRightTorqEff_, float fLeftOrCPedSmth_, float fRightPedSmth_);
+
+    //Receiver for Power Balance data
+    void PowerBalanceReceiver(double dRxTime_, float fPowerBalance_, bool bPowerBalanceRightPedalIndicator_);
+
     AAntPlusReaderActor* SpawnPowerReaderActor;
     AAntPlusReaderActor* SpawnTrainerReaderActor;
     AAntPlusReaderActor* SpawnHeartReaderActor;
 
     BOOL bBroadcasting;
+    BOOL bPowerDecoderInitialized;
+    time_t previousRxTime;
     USHORT DeviceNumber[3];
     USHORT DeviceType[3];
     USHORT TransmissionType[3];
     DSISerialGeneric* pclSerialObject;
     DSIFramerANT* pclMessageObject;
-    BOOL bDisplay;
+    UCHAR ucPowerOnlyUpdateEventCount;
+    DOUBLE dRxTimeTePs;
     UCHAR aucTransmitBuffer[ANT_STANDARD_DATA_PAYLOAD_SIZE];
 
     unsigned long ulNewEventTime;
