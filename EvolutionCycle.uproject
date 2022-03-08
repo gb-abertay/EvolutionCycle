@@ -13,6 +13,8 @@
 	"Plugins": [
 		{
 			"Name": "ApexDestruction",
+			"Enabled": true,
+			"Name": "AntPlusReader",
 			"Enabled": true
 		}
 	]
