@@ -111,6 +111,9 @@ public:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int AverageCadence;
 
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+        int HeartRate;
+
 private:
 
     bool ResetChannel();

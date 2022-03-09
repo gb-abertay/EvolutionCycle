@@ -563,6 +563,10 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     int usDeviceNumber = stMessage.aucData[MESSAGE_BUFFER_DATA11_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA12_INDEX] << 8);
                     int ucDeviceType = stMessage.aucData[MESSAGE_BUFFER_DATA13_INDEX];
                     int ucTransmissionType = stMessage.aucData[MESSAGE_BUFFER_DATA14_INDEX];
+                    unsigned short usCurrentEventTime;
+                    unsigned short usDeltaEventTime;
+                    time_t currentRxTime = time(NULL);
+
                     switch (stMessage.aucData[0])
                     {
                     case 0:
@@ -574,15 +578,15 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
 
                     case 1:
                         // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
-                        time_t currentRxTime = time(NULL);
+                        
                         if (currentRxTime - previousRxTime >= 2)
                         {
                             ulNewEventTime += (currentRxTime - previousRxTime) / 2 * 32768;
                         }
                         previousRxTime = currentRxTime;
 
-                        unsigned short usCurrentEventTime = stMessage.aucData[MESSAGE_BUFFER_DATA15_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA16_INDEX] << 8);
-                        unsigned short usDeltaEventTime = usCurrentEventTime - usPreviousEventTime;
+                        usCurrentEventTime = stMessage.aucData[MESSAGE_BUFFER_DATA15_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA16_INDEX] << 8);
+                        usDeltaEventTime = usCurrentEventTime - usPreviousEventTime;
                         ulNewEventTime += usDeltaEventTime;
                         usPreviousEventTime = usCurrentEventTime;
                         UE_LOG(LogTemp, Warning, TEXT("APR: %f-"), (double)ulNewEventTime / 32768);
@@ -626,6 +630,11 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                             }
                         }
                         break;
+                    case 2:
+                        break;
+                    case 3:
+                        HeartRate = stMessage.aucData[ucDataOffset + 7];
+                        break;
                     }
 
 
@@ -643,6 +652,9 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
             USHORT usDeviceNumber = stMessage.aucData[MESSAGE_BUFFER_DATA2_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA3_INDEX] << 8);
             UCHAR ucDeviceType = stMessage.aucData[MESSAGE_BUFFER_DATA4_INDEX];
             UCHAR ucTransmissionType = stMessage.aucData[MESSAGE_BUFFER_DATA5_INDEX];
+            unsigned short usCurrentEventTime;
+            unsigned short usDeltaEventTime;
+            time_t currentRxTime = time(NULL);
             switch (stMessage.aucData[0])
             {
             case 0:
@@ -650,6 +662,65 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                 {
                     FoundChannels.Push(FChannelID{ usDeviceNumber,ucDeviceType,ucTransmissionType });
                 }
+                break;
+            case 1:
+                // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
+
+                if (currentRxTime - previousRxTime >= 2)
+                {
+                    ulNewEventTime += (currentRxTime - previousRxTime) / 2 * 32768;
+                }
+                previousRxTime = currentRxTime;
+
+                usCurrentEventTime = stMessage.aucData[MESSAGE_BUFFER_DATA15_INDEX] | (stMessage.aucData[MESSAGE_BUFFER_DATA16_INDEX] << 8);
+                usDeltaEventTime = usCurrentEventTime - usPreviousEventTime;
+                ulNewEventTime += usDeltaEventTime;
+                usPreviousEventTime = usCurrentEventTime;
+                UE_LOG(LogTemp, Warning, TEXT("APR: %f-"), (double)ulNewEventTime / 32768);
+
+                // NOTE: In this example we use the incoming message timestamp as it typically has the most accuracy
+                // NOTE: The library will handle the received time discrepancy caused by power only event count linked messages
+                if (bPowerDecoderInitialized)
+                {
+                    DecodePowerMessage((double)ulNewEventTime / 32768, &stMessage.aucData[ucDataOffset]);
+                }
+
+                // NOTE: We must compensate for the power only event count/rx time discrepance here, because the library does not decode Te/Ps
+                // The torque effectiveness/pedal smoothness page is tied to the power only page and vice versa,
+                // so both pages share the same "received time" depending on which page was received first and if the event count updated.
+                if (stMessage.aucData[ucDataOffset] == ANT_TEPS || stMessage.aucData[ucDataOffset] == ANT_POWERONLY)
+                {
+                    UCHAR ucNewPowerOnlyUpdateEventCount = stMessage.aucData[ucDataOffset + 1];
+
+                    if (ucNewPowerOnlyUpdateEventCount != ucPowerOnlyUpdateEventCount)
+                    {
+                        ucPowerOnlyUpdateEventCount = ucNewPowerOnlyUpdateEventCount;
+                        dRxTimeTePs = (double)ulNewEventTime / 32768;
+                    }
+
+                    if (stMessage.aucData[ucDataOffset] == ANT_TEPS)
+                    {
+                        // NOTE: Any value greater than 200 or 100% should be considered "INVALID"
+                        FLOAT fLeftTorqueEffectiveness = (float)stMessage.aucData[ucDataOffset + 2] / 2;
+                        FLOAT fRightTorqueEffectiveness = (float)stMessage.aucData[ucDataOffset + 3] / 2;
+                        FLOAT fLeftOrCombPedalSmoothness = (float)stMessage.aucData[ucDataOffset + 4] / 2;
+                        FLOAT fRightPedalSmoothness = (float)stMessage.aucData[ucDataOffset + 4] / 2;
+                        TePsReceiver(dRxTimeTePs, fLeftTorqueEffectiveness, fRightTorqueEffectiveness, fLeftOrCombPedalSmoothness, fRightPedalSmoothness);
+                    }
+                    else
+                    {
+                        // NOTE: Power only is a separate data stream containing similar power data compared to torque data pages but containing pedal power balance
+                        // On power only sensors, it would be valuable to average power balance between generated records
+                        FLOAT fPowerBalance = (float)(0x7F & stMessage.aucData[ucDataOffset + 2]);
+                        BOOL bPowerBalanceRightPedalIndicator = (0x80 & stMessage.aucData[ucDataOffset + 2]) != 0;
+                        PowerBalanceReceiver(dRxTimeTePs, fPowerBalance, bPowerBalanceRightPedalIndicator);
+                    }
+                }
+                break;
+            case 2:
+                break;
+            case 3:
+                HeartRate = stMessage.aucData[ucDataOffset + 7];
                 break;
             }
 
@@ -705,33 +776,6 @@ void ASearchChannelActor::ClearChannelID(int DevType)
     }
 }
 
-//bool ASearchChannelActor::SpawnActor(int DevID, int DevType, int TransType)
-//{
-//    bool status;
-//
-//    switch (SaveSlotTranslator(DevType))
-//    {
-//    case 0:
-//        SpawnPowerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-//        status = SpawnPowerReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
-//        break;
-//    case 1:
-//        SpawnTrainerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-//        status = SpawnTrainerReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
-//        break;
-//    case 2:
-//        SpawnHeartReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-//        status = SpawnHeartReaderActor->SetChannelID(DevID, DevType, TransType, pclSerialObject, pclMessageObject);
-//        break;
-//    }
-//
-//    if (!status)
-//    {
-//        return false;
-//    }
-//    return true;
-//}
-
 bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
 {
     BOOL bStatus;
@@ -757,33 +801,6 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
         return false;
     }
 }
-
-//bool ASearchChannelActor::SpawnActor(int i)
-//{
-//    bool status;
-//
-//    switch (i)
-//    {
-//    case 0:
-//        SpawnPowerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-//        status = SpawnPowerReaderActor->SetChannelID(DeviceNumber[0], DeviceType[0], DeviceType[0], pclSerialObject, pclMessageObject);
-//        break;
-//    case 1:
-//        SpawnTrainerReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-//        status = SpawnTrainerReaderActor->SetChannelID(DeviceNumber[1], DeviceType[1], DeviceType[1], pclSerialObject, pclMessageObject);
-//        break;
-//    case 2:
-//        SpawnHeartReaderActor = GetWorld()->SpawnActor<AAntPlusReaderActor>(ActorToSpawn, FVector(0, 0, 0), FRotator(0));
-//        status = SpawnHeartReaderActor->SetChannelID(DeviceNumber[2], DeviceType[2], DeviceType[2], pclSerialObject, pclMessageObject);
-//        break;
-//    }
-//
-//    if (!status)
-//    {
-//        return false;
-//    }
-//    return true;
-//}
 
 bool ASearchChannelActor::CreateChannel(int i)
 {
@@ -812,7 +829,6 @@ bool ASearchChannelActor::ResetChannel()
     // Reset system
     UE_LOG(LogTemp, Warning, TEXT("Resetting module..."));
     bStatus = pclMessageObject->ResetSystem();
-    DSIThread_Sleep(1000);
 
     // Start the test by setting network key
     UE_LOG(LogTemp, Warning, TEXT("Setting network key..."));
