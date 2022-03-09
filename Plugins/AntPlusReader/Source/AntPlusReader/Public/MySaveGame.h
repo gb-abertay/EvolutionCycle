@@ -16,7 +16,12 @@ class ANTPLUSREADER_API UMySaveGame : public USaveGame
 public:
 		UMySaveGame();
 
-		int DeviceID;
-		int DeviceType;
-		int TransmissionType;
+		UPROPERTY()
+			int DeviceID;
+
+		UPROPERTY()
+			int DeviceType;
+
+		UPROPERTY()
+			int TransmissionType;
 };

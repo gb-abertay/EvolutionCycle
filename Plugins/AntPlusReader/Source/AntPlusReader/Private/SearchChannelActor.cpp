@@ -100,7 +100,7 @@ void ASearchChannelActor::BeginPlay()
     DeviceType[2] = 120;
     TransmissionType[2] = 0;
 
-    //LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
+    LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
 
     SearchType = -1;
     NewConnection = -1;
@@ -184,8 +184,6 @@ bool ASearchChannelActor::Search(int DevType)
     FoundChannels.Empty();
     IsSearching = true;
     SearchType = SaveSlotTranslator(DevType);
-
-    (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject))->StartBackgroundTask();
 
     if (firstSearch)
     {
@@ -806,18 +804,38 @@ bool ASearchChannelActor::CreateChannel(int i)
 {
     BOOL bStatus;
 
-    int type = i + 1;
+    SearchType = i;
 
-    bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
+    if (firstSearch)
+    {
+        firstSearch = false;
+        bStatus = ResetChannel();
+        pclMessageObject->CloseChannel(0, MESSAGE_TIMEOUT);
+    }
+
+    bStatus = pclMessageObject->AssignChannel(i+1, 0, 0, MESSAGE_TIMEOUT);
 
     if (bStatus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[i], DeviceType[i], TransmissionType[i]);
+
+        switch (i)
+        {
+        case 0:
+            PowerConnected = true;
+            break;
+        case 1:
+            TrainerConnected = true;
+            break;
+        case 2:
+            HeartConnected = true;
+        }
+
         return true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+        UE_LOG(LogTemp, Warning, TEXT("Failed to set up new Channel with id %i/%i/%i"), DeviceNumber[i], DeviceType[i], TransmissionType[i]);
         return false;
     }
 }
@@ -825,6 +843,8 @@ bool ASearchChannelActor::CreateChannel(int i)
 bool ASearchChannelActor::ResetChannel()
 {
     BOOL bStatus;
+
+    (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject))->StartBackgroundTask();
 
     // Reset system
     UE_LOG(LogTemp, Warning, TEXT("Resetting module..."));
@@ -866,11 +886,12 @@ void ASearchChannelActor::LoadChannelID()
         if (UMySaveGame* LoadedGame = Cast<UMySaveGame>(UGameplayStatics::LoadGameFromSlot(SaveName, i)))
         {
             DeviceNumber[i] = LoadedGame->DeviceID;
-            DeviceType[i] = LoadedGame->DeviceType;
+            if(DeviceNumber[i] != 0)
+                DeviceType[i] = LoadedGame->DeviceType;
             TransmissionType[i] = LoadedGame->TransmissionType;
 
             // The operation was successful, so LoadedGame now contains the data we saved earlier.
-            UE_LOG(LogTemp, Warning, TEXT("LOADED --> DeviceID: %i, DeviceType: %i, TransmissionType: %i"), LoadedGame->DeviceID, LoadedGame->DeviceType, LoadedGame->TransmissionType);
+            UE_LOG(LogTemp, Warning, TEXT("LOADED --> DeviceID: %i, DeviceType: %i, TransmissionType: %i"), DeviceNumber[i], DeviceType[i], TransmissionType[i]);
         }
     }
 }
