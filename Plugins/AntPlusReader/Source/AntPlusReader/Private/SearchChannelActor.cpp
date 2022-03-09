@@ -700,6 +700,7 @@ void ASearchChannelActor::ClearChannelID(int DevType)
         {
             // Save succeeded.
             UE_LOG(LogTemp, Warning, TEXT("CLEARED --> DeviceID: %i, DeviceType: %i, TransmissionType: %i"), SaveGameInstance->DeviceID, SaveGameInstance->DeviceType, SaveGameInstance->TransmissionType);
+            closeChannel(SaveSlot + 1);
         }
     }
 }
@@ -856,6 +857,11 @@ void ASearchChannelActor::LoadChannelID()
             UE_LOG(LogTemp, Warning, TEXT("LOADED --> DeviceID: %i, DeviceType: %i, TransmissionType: %i"), LoadedGame->DeviceID, LoadedGame->DeviceType, LoadedGame->TransmissionType);
         }
     }
+}
+
+void ASearchChannelActor::closeChannel(int channel)
+{
+    pclMessageObject->CloseChannel(channel, MESSAGE_TIMEOUT);
 }
 
 FString ASearchChannelActor::SaveNameTranslator(int DevType)

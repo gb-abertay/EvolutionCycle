@@ -69,15 +69,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UMG")
         void ClearChannelID(int DevType);
 
-    //UFUNCTION(BlueprintCallable, Category = "UMG")
-    //    bool SpawnActor(int DevID, int DevType, int TransType);
-
-    //bool SpawnActor(int i);
+     UFUNCTION(BlueprintCallable, Category = "UMG")
+         void closeChannel(int DevType);
 
      UFUNCTION(BlueprintCallable, Category = "UMG")
         bool CreateChannel(int DevID, int DevType, int TransType);
-
-    bool CreateChannel(int i);
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int SearchType;
@@ -119,6 +115,7 @@ private:
 
     bool ResetChannel();
     void LoadChannelID();
+    bool CreateChannel(int i);
     FString SaveNameTranslator(int DevType);
     int SaveSlotTranslator(int DevType);
     bool IsNewDevice(int DevNum, int DevType, int TransType);
