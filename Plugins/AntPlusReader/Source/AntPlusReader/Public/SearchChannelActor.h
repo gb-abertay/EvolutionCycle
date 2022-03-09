@@ -61,7 +61,7 @@ public:
 
     bool GetIsSearching();
 
-    void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, int DeviceType);
+    void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_);
 
     UFUNCTION(BlueprintCallable, Category = "UMG")
         void SaveChannelID(int DevID, int DevType, int TransType);
@@ -132,6 +132,7 @@ private:
     //Receiver for Power Balance data
     void PowerBalanceReceiver(double dRxTime_, float fPowerBalance_, bool bPowerBalanceRightPedalIndicator_);
 
+    bool firstSearch;
     BOOL bBroadcasting;
     BOOL bPowerDecoderInitialized;
     time_t previousRxTime;
@@ -156,7 +157,7 @@ class WaitForMessagesTask : public FNonAbandonableTask
 {
 public:
 
-    WaitForMessagesTask(ASearchChannelActor* SCActor, DSIFramerANT* pclMsgObj, int DevType);
+    WaitForMessagesTask(ASearchChannelActor* SCActor, DSIFramerANT* pclMsgObj);
     ~WaitForMessagesTask();
 
     FORCEINLINE TStatId GetStatId() const
@@ -169,5 +170,4 @@ public:
 private:
     ASearchChannelActor* SearchChannelActor;
     DSIFramerANT* pclMessageObject;
-    int DeviceType;
 };

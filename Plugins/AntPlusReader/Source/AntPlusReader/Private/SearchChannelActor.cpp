@@ -104,6 +104,7 @@ void ASearchChannelActor::BeginPlay()
 
     SearchType = -1;
     NewConnection = -1;
+    firstSearch = true;
     NewDevice = false;
     PowerConnected = false;
     TrainerConnected = false;
@@ -184,12 +185,33 @@ bool ASearchChannelActor::Search(int DevType)
     IsSearching = true;
     SearchType = SaveSlotTranslator(DevType);
 
-    (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject, SearchType))->StartBackgroundTask();
+    (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject))->StartBackgroundTask();
 
-    if (!ResetChannel())
+    if (firstSearch)
     {
-        IsSearching = false;
-        return false;
+        if (!ResetChannel())
+        {
+            IsSearching = false;
+            return false;
+        }
+        firstSearch = false;
+    }
+    else
+    {
+        BOOL bStatus;
+
+        bStatus = pclMessageObject->AssignChannel(0, 0, 0, MESSAGE_TIMEOUT);
+
+        if (bStatus)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Assigned New Channel To Search"));
+            return true;
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Failed To Assign New Channel To Search"));
+            return false;
+        }
     }
 
     return true;
@@ -200,7 +222,7 @@ bool ASearchChannelActor::GetIsSearching()
     return IsSearching;
 }
 
-void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, int DevType)
+void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
 {
     BOOL bStatus;
     BOOL bPrintBuffer = FALSE;
@@ -251,7 +273,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, 
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Channel assigned"));
                     UE_LOG(LogTemp, Warning, TEXT("Setting Channel ID..."));
-                    bStatus = pclMessageObject->SetChannelID(channelNum, DeviceNumber[DevType], DeviceType[DevType], TransmissionType[DevType], MESSAGE_TIMEOUT);
+                    bStatus = pclMessageObject->SetChannelID(channelNum, DeviceNumber[SearchType], DeviceType[SearchType], TransmissionType[SearchType], MESSAGE_TIMEOUT);
                     break;
                 }
 
@@ -716,6 +738,7 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     int type = SaveSlotTranslator(DevType) + 1;
 
     pclMessageObject->CloseChannel(0, MESSAGE_TIMEOUT);
+    SearchType = type - 1;
 
     bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
     DeviceNumber[type - 1] = DevID;
@@ -889,11 +912,10 @@ void ASearchChannelActor::PowerBalanceReceiver(double dRxTime_, float fPowerBala
 //==============================================
 // Task for Threading
 
-WaitForMessagesTask::WaitForMessagesTask(ASearchChannelActor* SCActor, DSIFramerANT* pclMsgObj, int DevType)
+WaitForMessagesTask::WaitForMessagesTask(ASearchChannelActor* SCActor, DSIFramerANT* pclMsgObj)
 {
     SearchChannelActor = SCActor;
     pclMessageObject = pclMsgObj;
-    DeviceType = DevType;
 }
 
 WaitForMessagesTask::~WaitForMessagesTask()
@@ -922,7 +944,7 @@ void WaitForMessagesTask::DoWork()
 
             else if (usSize != DSI_FRAMER_TIMEDOUT && usSize != 0)
             {
-                SearchChannelActor->ProcessMessage(stMessage, usSize, DeviceType);
+                SearchChannelActor->ProcessMessage(stMessage, usSize);
             }
         }
     }
