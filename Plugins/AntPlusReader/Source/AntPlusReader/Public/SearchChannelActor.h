@@ -61,7 +61,7 @@ public:
 
     bool GetIsSearching();
 
-    void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_, int DeviceType);
+    void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_);
 
     UFUNCTION(BlueprintCallable, Category = "UMG")
         void SaveChannelID(int DevID, int DevType, int TransType);
@@ -69,15 +69,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "UMG")
         void ClearChannelID(int DevType);
 
-    //UFUNCTION(BlueprintCallable, Category = "UMG")
-    //    bool SpawnActor(int DevID, int DevType, int TransType);
-
-    //bool SpawnActor(int i);
+     UFUNCTION(BlueprintCallable, Category = "UMG")
+         void closeChannel(int DevType);
 
      UFUNCTION(BlueprintCallable, Category = "UMG")
         bool CreateChannel(int DevID, int DevType, int TransType);
-
-    bool CreateChannel(int i);
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int SearchType;
@@ -115,10 +111,14 @@ public:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int AverageCadence;
 
+    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+        int HeartRate;
+
 private:
 
     bool ResetChannel();
     void LoadChannelID();
+    bool CreateChannel(int i);
     FString SaveNameTranslator(int DevType);
     int SaveSlotTranslator(int DevType);
     bool IsNewDevice(int DevNum, int DevType, int TransType);
@@ -132,6 +132,7 @@ private:
     //Receiver for Power Balance data
     void PowerBalanceReceiver(double dRxTime_, float fPowerBalance_, bool bPowerBalanceRightPedalIndicator_);
 
+    bool firstSearch;
     BOOL bBroadcasting;
     BOOL bPowerDecoderInitialized;
     time_t previousRxTime;
@@ -156,7 +157,7 @@ class WaitForMessagesTask : public FNonAbandonableTask
 {
 public:
 
-    WaitForMessagesTask(ASearchChannelActor* SCActor, DSIFramerANT* pclMsgObj, int DevType);
+    WaitForMessagesTask(ASearchChannelActor* SCActor, DSIFramerANT* pclMsgObj);
     ~WaitForMessagesTask();
 
     FORCEINLINE TStatId GetStatId() const
@@ -169,5 +170,4 @@ public:
 private:
     ASearchChannelActor* SearchChannelActor;
     DSIFramerANT* pclMessageObject;
-    int DeviceType;
 };
