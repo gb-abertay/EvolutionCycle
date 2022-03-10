@@ -800,6 +800,23 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     }
 }
 
+void ASearchChannelActor::SetResistance(int resistance)
+{
+    BOOL bStatus;
+
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = {0x30, 0,0,0,0,0,0,resistance};
+    bStatus = pclMessageObject->SendBroadcastData(2, payload);
+
+    if (bStatus)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Changed resistance to %d"), resistance);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to change resistance to %d"), resistance);
+    }
+}
+
 bool ASearchChannelActor::CreateChannel(int i)
 {
     BOOL bStatus;

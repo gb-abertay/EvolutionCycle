@@ -75,6 +75,9 @@ public:
      UFUNCTION(BlueprintCallable, Category = "UMG")
         bool CreateChannel(int DevID, int DevType, int TransType);
 
+     UFUNCTION(BlueprintCallable, Category = "UMG")
+        void SetResistance(int resistance);
+
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int SearchType;
 
