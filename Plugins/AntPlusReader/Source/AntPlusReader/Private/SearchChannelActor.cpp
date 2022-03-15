@@ -319,7 +319,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     switch (channelNum)
                     {
                     case 1:
-                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8182, MESSAGE_TIMEOUT);
+                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 32768, MESSAGE_TIMEOUT);
                         break;
                     case 2:
                         bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8192, MESSAGE_TIMEOUT);
@@ -656,6 +656,15 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         }
                         break;
                     case 2:
+                        UE_LOG(LogTemp, Warning, TEXT("Ch02 - %i,%i,%i,%i,%i,%i,%i,%i"),
+                            stMessage.aucData[0],
+                            stMessage.aucData[1],
+                            stMessage.aucData[2],
+                            stMessage.aucData[3],
+                            stMessage.aucData[4],
+                            stMessage.aucData[5],
+                            stMessage.aucData[6],
+                            stMessage.aucData[7]);
                         break;
                     case 3:
                         HeartRate = stMessage.aucData[ucDataOffset + 7];
