@@ -80,6 +80,7 @@ void ASearchChannelActor::BeginPlay()
     pclMessageObject = (DSIFramerANT*)NULL;
 
     //Other various variables
+    TimeElapsed = 0;
     ulNewEventTime = 0;
     usPreviousEventTime = 0;
     memset(aucTransmitBuffer, 0, ANT_STANDARD_DATA_PAYLOAD_SIZE);
@@ -100,7 +101,7 @@ void ASearchChannelActor::BeginPlay()
     DeviceType[2] = 120;
     TransmissionType[2] = 0;
 
-    //LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
+    LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
 
     SearchType = -1;
     NewConnection = -1;
@@ -132,10 +133,20 @@ void ASearchChannelActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+    TimeElapsed += DeltaTime;
+
+    if ((TimeElapsed > 1) && IsUSBConnected)
+    {
+        TimeElapsed = 0;
+        if (!CheckUSBConnection())
+            (new FAutoDeleteAsyncTask<ConnectToUSBTask>(this, pclSerialObject))->StartBackgroundTask();
+    }
+
     if (PowerConnected)
     {
         AveragePower = APower/2;
         AverageCadence = ACadence/2;
+        return;
     }
 }
 
@@ -185,8 +196,6 @@ bool ASearchChannelActor::Search(int DevType)
     IsSearching = true;
     SearchType = SaveSlotTranslator(DevType);
 
-    (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject))->StartBackgroundTask();
-
     if (firstSearch)
     {
         if (!ResetChannel())
@@ -220,6 +229,12 @@ bool ASearchChannelActor::Search(int DevType)
 bool ASearchChannelActor::GetIsSearching()
 {
     return IsSearching;
+}
+
+void ASearchChannelActor::SetIsUSBConnected(bool b)
+{
+    IsUSBConnected = b;
+    firstSearch = b;
 }
 
 void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
@@ -432,12 +447,6 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         if (bBroadcasting)
                         {
                             pclMessageObject->SendBroadcastData(channelNum, aucTransmitBuffer);
-
-                            static int iIndex = 0;
-                            static char ac[] = { '|', '/', '-', '\\' };
-                            UE_LOG(LogTemp, Warning, TEXT("Tx: %c\r"), ac[iIndex++]);
-                            fflush(stdout);
-                            iIndex &= 3;
                         }
                         break;
                     }
@@ -785,6 +794,13 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     pclMessageObject->CloseChannel(0, MESSAGE_TIMEOUT);
     SearchType = type - 1;
 
+    if (firstSearch)
+    {
+        firstSearch = false;
+        bStatus = ResetChannel();
+        pclMessageObject->CloseChannel(0, MESSAGE_TIMEOUT);
+    }
+
     bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
     DeviceNumber[type - 1] = DevID;
     DeviceType[type - 1] = DevType;
@@ -802,22 +818,76 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     }
 }
 
+void ASearchChannelActor::SetResistance(int resistance)
+{
+    BOOL bStatus;
+
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = {0x30, 0,0,0,0,0,0,resistance};
+    bStatus = pclMessageObject->SendBroadcastData(2, payload);
+
+    if (bStatus)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Changed resistance to %d"), resistance);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to change resistance to %d"), resistance);
+    }
+}
+
+bool ASearchChannelActor::CheckUSBConnection()
+{
+    UCHAR aucDeviceDescription[USB_MAX_STRLEN];
+    UCHAR aucDeviceSerial[USB_MAX_STRLEN];
+    if (!pclMessageObject->GetDeviceUSBInfo(pclSerialObject->GetDeviceNumber(), aucDeviceDescription, aucDeviceSerial, USB_MAX_STRLEN))
+    {
+        IsUSBConnected = false;
+        PowerConnected = false;
+        TrainerConnected = false;
+        HeartConnected = false;
+        UE_LOG(LogTemp, Warning, TEXT("=========USB UNPLUGGED==========="));
+        return false;
+    }
+    return true;
+
+}
+
 bool ASearchChannelActor::CreateChannel(int i)
 {
     BOOL bStatus;
 
-    int type = i + 1;
+    SearchType = i;
 
-    bStatus = pclMessageObject->AssignChannel(type, 0, 0, MESSAGE_TIMEOUT);
+    if (firstSearch)
+    {
+        firstSearch = false;
+        bStatus = ResetChannel();
+        pclMessageObject->CloseChannel(0, MESSAGE_TIMEOUT);
+    }
+
+    bStatus = pclMessageObject->AssignChannel(i+1, 0, 0, MESSAGE_TIMEOUT);
 
     if (bStatus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[i], DeviceType[i], TransmissionType[i]);
+
+        switch (i)
+        {
+        case 0:
+            PowerConnected = true;
+            break;
+        case 1:
+            TrainerConnected = true;
+            break;
+        case 2:
+            HeartConnected = true;
+        }
+
         return true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+        UE_LOG(LogTemp, Warning, TEXT("Failed to set up new Channel with id %i/%i/%i"), DeviceNumber[i], DeviceType[i], TransmissionType[i]);
         return false;
     }
 }
@@ -825,6 +895,8 @@ bool ASearchChannelActor::CreateChannel(int i)
 bool ASearchChannelActor::ResetChannel()
 {
     BOOL bStatus;
+
+    (new FAutoDeleteAsyncTask<WaitForMessagesTask>(this, pclMessageObject))->StartBackgroundTask();
 
     // Reset system
     UE_LOG(LogTemp, Warning, TEXT("Resetting module..."));
@@ -866,11 +938,12 @@ void ASearchChannelActor::LoadChannelID()
         if (UMySaveGame* LoadedGame = Cast<UMySaveGame>(UGameplayStatics::LoadGameFromSlot(SaveName, i)))
         {
             DeviceNumber[i] = LoadedGame->DeviceID;
-            DeviceType[i] = LoadedGame->DeviceType;
+            if(DeviceNumber[i] != 0)
+                DeviceType[i] = LoadedGame->DeviceType;
             TransmissionType[i] = LoadedGame->TransmissionType;
 
             // The operation was successful, so LoadedGame now contains the data we saved earlier.
-            UE_LOG(LogTemp, Warning, TEXT("LOADED --> DeviceID: %i, DeviceType: %i, TransmissionType: %i"), LoadedGame->DeviceID, LoadedGame->DeviceType, LoadedGame->TransmissionType);
+            UE_LOG(LogTemp, Warning, TEXT("LOADED --> DeviceID: %i, DeviceType: %i, TransmissionType: %i"), DeviceNumber[i], DeviceType[i], TransmissionType[i]);
         }
     }
 }
@@ -970,4 +1043,28 @@ void WaitForMessagesTask::DoWork()
             }
         }
     }
+}
+
+ConnectToUSBTask::ConnectToUSBTask(ASearchChannelActor* SCActor, DSISerialGeneric* pclSrlObj)
+{
+    SearchChannelActor = SCActor;
+    pclSerialObject = pclSrlObj;
+}
+
+ConnectToUSBTask::~ConnectToUSBTask()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Stopped trying to connect to USB!!"))
+}
+
+void ConnectToUSBTask::DoWork()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Thread Started"));
+    BOOL bStatus = false;
+
+    while (!bStatus)
+    {
+        bStatus = pclSerialObject->Open();
+    }
+
+    SearchChannelActor->SetIsUSBConnected(true);
 }

@@ -59,21 +59,22 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Search")
         bool Search(int DevType);
 
-    bool GetIsSearching();
-
     void ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_);
 
-    UFUNCTION(BlueprintCallable, Category = "UMG")
+    UFUNCTION(BlueprintCallable, Category = "Search")
         void SaveChannelID(int DevID, int DevType, int TransType);
 
-    UFUNCTION(BlueprintCallable, Category = "UMG")
+    UFUNCTION(BlueprintCallable, Category = "Search")
         void ClearChannelID(int DevType);
 
-     UFUNCTION(BlueprintCallable, Category = "UMG")
+     UFUNCTION(BlueprintCallable, Category = "Search")
          void closeChannel(int DevType);
 
-     UFUNCTION(BlueprintCallable, Category = "UMG")
+     UFUNCTION(BlueprintCallable, Category = "Search")
         bool CreateChannel(int DevID, int DevType, int TransType);
+
+     UFUNCTION(BlueprintCallable, Category = "Search")
+        void SetResistance(int resistance);
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int SearchType;
@@ -102,9 +103,6 @@ public:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         TArray<FChannelID> FoundChannels;
 
-    UPROPERTY(EditAnywhere);
-        TSubclassOf<AActor> ActorToSpawn;
-
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int AveragePower;
 
@@ -114,6 +112,9 @@ public:
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int HeartRate;
 
+    bool GetIsSearching();
+    void SetIsUSBConnected(bool b);
+
 private:
 
     bool ResetChannel();
@@ -122,6 +123,7 @@ private:
     FString SaveNameTranslator(int DevType);
     int SaveSlotTranslator(int DevType);
     bool IsNewDevice(int DevNum, int DevType, int TransType);
+    bool CheckUSBConnection();
 
     //Receiver for the power records from the power decoder
     static void RecordReceiver(double dLastRecordTime_, double dTotalRotation_, double dTotalEnergy_, float fAverageCadence_, float fAveragePower_);
@@ -132,6 +134,7 @@ private:
     //Receiver for Power Balance data
     void PowerBalanceReceiver(double dRxTime_, float fPowerBalance_, bool bPowerBalanceRightPedalIndicator_);
 
+    float TimeElapsed;
     bool firstSearch;
     BOOL bBroadcasting;
     BOOL bPowerDecoderInitialized;
@@ -170,4 +173,23 @@ public:
 private:
     ASearchChannelActor* SearchChannelActor;
     DSIFramerANT* pclMessageObject;
+};
+
+class ConnectToUSBTask : public FNonAbandonableTask
+{
+public:
+
+    ConnectToUSBTask(ASearchChannelActor* SCActor, DSISerialGeneric* pclSerialObject);
+    ~ConnectToUSBTask();
+
+    FORCEINLINE TStatId GetStatId() const
+    {
+        RETURN_QUICK_DECLARE_CYCLE_STAT(ConnectToUSBTask, STATGROUP_ThreadPoolAsyncTasks);
+    }
+
+    void DoWork();
+
+private:
+    ASearchChannelActor* SearchChannelActor;
+    DSISerialGeneric* pclSerialObject;
 };
