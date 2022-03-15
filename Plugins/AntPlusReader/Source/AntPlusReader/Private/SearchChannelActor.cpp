@@ -260,6 +260,8 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
             case 2:
                 channelNum = 2;
                 break;
+            case 3:
+                channelNum = 3;
             }
 
                 switch (stMessage.aucData[1])
@@ -314,7 +316,21 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     }
                     UE_LOG(LogTemp, Warning, TEXT("Radio Frequency set"));
                     UE_LOG(LogTemp, Warning, TEXT("Setting Channel Period..."));
-                    bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8182, MESSAGE_TIMEOUT);
+                    switch (channelNum)
+                    {
+                    case 1:
+                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8182, MESSAGE_TIMEOUT);
+                        break;
+                    case 2:
+                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8192, MESSAGE_TIMEOUT);
+                        break;
+                    case 3:
+                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 32280, MESSAGE_TIMEOUT);
+                        break;
+                    default:
+                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 2048, MESSAGE_TIMEOUT);
+                        break;
+                    }
                     break;
                 }
 
