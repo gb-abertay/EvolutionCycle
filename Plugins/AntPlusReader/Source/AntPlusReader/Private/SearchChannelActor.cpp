@@ -262,6 +262,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                 break;
             case 3:
                 channelNum = 3;
+                break;
             }
 
                 switch (stMessage.aucData[1])
