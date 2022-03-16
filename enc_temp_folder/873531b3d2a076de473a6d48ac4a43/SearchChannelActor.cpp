@@ -615,6 +615,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         usDeltaEventTime = usCurrentEventTime - usPreviousEventTime;
                         ulNewEventTime += usDeltaEventTime;
                         usPreviousEventTime = usCurrentEventTime;
+                        UE_LOG(LogTemp, Warning, TEXT("APR: %f-"), (double)ulNewEventTime / 32768);
 
                         // NOTE: In this example we use the incoming message timestamp as it typically has the most accuracy
                         // NOTE: The library will handle the received time discrepancy caused by power only event count linked messages
