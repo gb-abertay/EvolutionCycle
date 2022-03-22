@@ -243,6 +243,17 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
     BOOL bPrintBuffer = FALSE;
     UCHAR ucDataOffset = MESSAGE_BUFFER_DATA2_INDEX;   // For most data messages
 
+
+    UE_LOG(LogTemp, Warning, TEXT(" %X,%X,%X,%X,%X,%X,%X,%X"),
+        stMessage.aucData[0],
+        stMessage.aucData[1],
+        stMessage.aucData[2],
+        stMessage.aucData[3],
+        stMessage.aucData[4],
+        stMessage.aucData[5],
+        stMessage.aucData[6],
+        stMessage.aucData[7]);
+
     switch (stMessage.ucMessageID)
     {
         case MESG_RESPONSE_EVENT_ID:
@@ -593,6 +604,8 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     unsigned short usDeltaEventTime;
                     time_t currentRxTime = time(NULL);
 
+
+
                     switch (stMessage.aucData[0])
                     {
                     case 0:
@@ -605,6 +618,8 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     case 1:
                         // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
                         
+                        UE_LOG(LogTemp, Warning, TEXT("hi"));
+
                         if (currentRxTime - previousRxTime >= 2)
                         {
                             ulNewEventTime += (currentRxTime - previousRxTime) / 2 * 32768;
