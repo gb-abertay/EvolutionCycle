@@ -243,6 +243,17 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
     BOOL bPrintBuffer = FALSE;
     UCHAR ucDataOffset = MESSAGE_BUFFER_DATA2_INDEX;   // For most data messages
 
+
+    UE_LOG(LogTemp, Warning, TEXT(" %X,%X,%X,%X,%X,%X,%X,%X"),
+        stMessage.aucData[0],
+        stMessage.aucData[1],
+        stMessage.aucData[2],
+        stMessage.aucData[3],
+        stMessage.aucData[4],
+        stMessage.aucData[5],
+        stMessage.aucData[6],
+        stMessage.aucData[7]);
+
     switch (stMessage.ucMessageID)
     {
         case MESG_RESPONSE_EVENT_ID:
@@ -320,7 +331,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     switch (channelNum)
                     {
                     case 1:
-                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 32768, MESSAGE_TIMEOUT);
+                        bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8182, MESSAGE_TIMEOUT);
                         break;
                     case 2:
                         bStatus = pclMessageObject->SetChannelPeriod(channelNum, 8192, MESSAGE_TIMEOUT);
@@ -362,7 +373,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     if (stMessage.aucData[0] == 1)
                     {
                         // We register the power record receiver and initialize the bike power decoders after the channel has opened
-                        InitPowerDecoder(1, 0, 10, RecordReceiver); //dRecordInterval, dTimeBase, dReSyncInterval, RecordReceiver
+                        InitPowerDecoder(0.25f, 0, 10, RecordReceiver); //dRecordInterval, dTimeBase, dReSyncInterval, RecordReceiver
                         bPowerDecoderInitialized = TRUE;
                         UE_LOG(LogTemp, Warning, TEXT("APR: Power record decode library initialized"));
                     }
@@ -593,6 +604,8 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     unsigned short usDeltaEventTime;
                     time_t currentRxTime = time(NULL);
 
+
+
                     switch (stMessage.aucData[0])
                     {
                     case 0:
@@ -605,6 +618,8 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     case 1:
                         // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
                         
+                        UE_LOG(LogTemp, Warning, TEXT("hi"));
+
                         if (currentRxTime - previousRxTime >= 2)
                         {
                             ulNewEventTime += (currentRxTime - previousRxTime) / 2 * 32768;
@@ -656,7 +671,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         }
                         break;
                     case 2:
-                        UE_LOG(LogTemp, Warning, TEXT("Ch02 - %i,%i,%i,%i,%i,%i,%i,%i"),
+                        UE_LOG(LogTemp, Warning, TEXT("Ch02 - %X,%X,%X,%X,%X,%X,%X,%X"),
                             stMessage.aucData[0],
                             stMessage.aucData[1],
                             stMessage.aucData[2],
