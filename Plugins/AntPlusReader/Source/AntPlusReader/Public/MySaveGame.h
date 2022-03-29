@@ -16,7 +16,7 @@ class ANTPLUSREADER_API UMySaveGame : public USaveGame
 public:
 		UMySaveGame();
 
-		UPROPERTY()
+		UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
 			int DeviceID;
 
 		UPROPERTY()
