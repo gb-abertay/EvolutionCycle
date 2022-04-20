@@ -53,17 +53,22 @@ void ARailCharacter::EndObstacle()
 	}
 
 	//If character was in right state for over 80% of the obstacle and is currently in the right state.
-	if ((percentage >= 0.8) && (RailCharacterState == CurrentObstacle))
+	if ((percentage >= 0.5) && ((uint8)RailCharacterState == (uint8)CurrentObstacle))
 	{
 		//passed obstacle would be true (add logic)
+		//Print Debug message to screen
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Obstacle Passed"));
+	}
+	else
+	{
+		//Print Debug message to screen
+		if (GEngine)
+			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Obstacle Failed"));
 	}
 
 	//Set the current obstacle to none
 	CurrentObstacle = EObstacleTypes::None;
-
-	//Print Debug message to screen
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("End of obstacle"));
 }
 
 // Called when the game starts or when spawned
@@ -82,13 +87,13 @@ void ARailCharacter::Tick(float DeltaTime)
 	{
 		switch (RailCharacterState)
 		{
-		case ERailCharacterState::Small:
+		case ERailCharacterStates::SMALL:
 			ObstacleTimings.SmallTime += DeltaTime;
 			break;
-		case ERailCharacterState::Medium:
+		case ERailCharacterStates::MEDIUM:
 			ObstacleTimings.MediumTime += DeltaTime;
 			break;
-		case ERailCharacterState::Large:
+		case ERailCharacterStates::LARGE:
 			ObstacleTimings.LargeTime += DeltaTime;
 			break;
 		default:

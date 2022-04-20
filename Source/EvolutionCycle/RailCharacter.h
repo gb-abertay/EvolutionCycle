@@ -16,6 +16,7 @@ enum class ERailCharacterStates : uint8
 	LARGE UMETA(DisplayName = "Large"),
 };
 
+UENUM(BlueprintType)
 enum class EObstacleTypes : uint8 {
 	None		UMETA(DisplayName = "None"),
 	Through       UMETA(DisplayName = "Through"),
