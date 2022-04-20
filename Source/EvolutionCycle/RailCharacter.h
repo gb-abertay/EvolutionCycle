@@ -7,6 +7,14 @@
 #include "Components/SplineComponent.h"
 #include "RailCharacter.generated.h"
 
+UENUM(BlueprintType)
+enum class EObstacleTypes : uint8 {
+	None		UMETA(DisplayName = "None"),
+	Through       UMETA(DisplayName = "Through"),
+	Over        UMETA(DisplayName = "Over"),
+	Smash        UMETA(DisplayName = "Smash"),
+};
+
 UCLASS()
 class EVOLUTIONCYCLE_API ARailCharacter : public APawn
 {
@@ -15,6 +23,12 @@ class EVOLUTIONCYCLE_API ARailCharacter : public APawn
 public:
 	// Sets default values for this pawn's properties
 	ARailCharacter();
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+		void StartObstacle(EObstacleTypes obstacle);
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+		void EndObstacle();
 
 protected:
 	// Called when the game starts or when spawned
@@ -41,5 +55,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+private:
+	EObstacleTypes CurrentObstacle;
 
 };
