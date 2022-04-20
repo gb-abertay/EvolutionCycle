@@ -7,6 +7,33 @@
 #include "Components/SplineComponent.h"
 #include "RailCharacter.generated.h"
 
+UENUM(BlueprintType)
+enum class ERailCharacterStates : uint8
+{
+	IDLE UMETA(DisplayName = "Idle"),
+	SMALL UMETA(DisplayName = "Small"),
+	MEDIUM UMETA(DisplayName = "Medium"),
+	LARGE UMETA(DisplayName = "Large"),
+};
+
+UENUM(BlueprintType)
+enum class EObstacleTypes : uint8 {
+	None		UMETA(DisplayName = "None"),
+	Through       UMETA(DisplayName = "Through"),
+	Over        UMETA(DisplayName = "Over"),
+	Smash        UMETA(DisplayName = "Smash"),
+};
+
+USTRUCT()
+struct FObstacleTimings
+{
+	GENERATED_BODY()
+public:
+		float SmallTime = 0.0;
+		float MediumTime = 0.0;
+		float LargeTime = 0.0;
+};
+
 UCLASS()
 class EVOLUTIONCYCLE_API ARailCharacter : public APawn
 {
@@ -15,6 +42,12 @@ class EVOLUTIONCYCLE_API ARailCharacter : public APawn
 public:
 	// Sets default values for this pawn's properties
 	ARailCharacter();
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+		void StartObstacle(EObstacleTypes obstacle);
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+		bool EndObstacle();
 
 protected:
 	// Called when the game starts or when spawned
@@ -26,14 +59,18 @@ protected:
 
 	// Character variables
 	UPROPERTY(BlueprintReadWrite)
-		float DistanceCovered;
+	float DistanceCovered;
 	UPROPERTY(BlueprintReadWrite)
 	float Speed;
 	UPROPERTY(BlueprintReadWrite)
 	bool IsBikeInputEnabled;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ERailCharacterStates RailCharacterState;
 
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void CharacterMovement(float DeltaTime);
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+	void ChangeStates(float AveragePower);
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -41,5 +78,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+private:
+	EObstacleTypes CurrentObstacle;
+	FObstacleTimings ObstacleTimings;
 
 };
