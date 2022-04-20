@@ -15,6 +15,16 @@ enum class EObstacleTypes : uint8 {
 	Smash        UMETA(DisplayName = "Smash"),
 };
 
+USTRUCT()
+struct FObstacleTimings
+{
+	GENERATED_BODY()
+public:
+		float SmallTime = 0.0;
+		float MediumTime = 0.0;
+		float LargeTime = 0.0;
+};
+
 UCLASS()
 class EVOLUTIONCYCLE_API ARailCharacter : public APawn
 {
@@ -57,5 +67,6 @@ public:
 
 private:
 	EObstacleTypes CurrentObstacle;
+	FObstacleTimings ObstacleTimings;
 
 };
