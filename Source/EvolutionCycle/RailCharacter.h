@@ -8,6 +8,14 @@
 #include "RailCharacter.generated.h"
 
 UENUM(BlueprintType)
+enum class ERailCharacterStates : uint8
+{
+	IDLE UMETA(DisplayName = "Idle"),
+	SMALL UMETA(DisplayName = "Small"),
+	MEDIUM UMETA(DisplayName = "Medium"),
+	LARGE UMETA(DisplayName = "Large"),
+};
+
 enum class EObstacleTypes : uint8 {
 	None		UMETA(DisplayName = "None"),
 	Through       UMETA(DisplayName = "Through"),
@@ -50,14 +58,18 @@ protected:
 
 	// Character variables
 	UPROPERTY(BlueprintReadWrite)
-		float DistanceCovered;
+	float DistanceCovered;
 	UPROPERTY(BlueprintReadWrite)
 	float Speed;
 	UPROPERTY(BlueprintReadWrite)
 	bool IsBikeInputEnabled;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ERailCharacterStates RailCharacterState;
 
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void CharacterMovement(float DeltaTime);
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+	void ChangeStates(float AveragePower);
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
