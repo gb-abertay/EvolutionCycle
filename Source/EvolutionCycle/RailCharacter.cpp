@@ -101,8 +101,14 @@ void ARailCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	
 }
 
-void ARailCharacter::CharacterMovement(float DeltaTime)
+void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 {
+	// Increase speed based on average power
+	if (IsBikeInputEnabled)
+	{
+		Speed += AveragePower / 7;
+	}
+
 	if (Speed > 0)
 	{
 		//Adjust to spline

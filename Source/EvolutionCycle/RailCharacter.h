@@ -68,7 +68,7 @@ protected:
 	ERailCharacterStates RailCharacterState;
 
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
-	void CharacterMovement(float DeltaTime);
+	void CharacterMovement(float DeltaTime, float AveragePower);
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void ChangeStates(float AveragePower);
 public:	
