@@ -24,19 +24,17 @@ void ARailCharacter::StartObstacle(EObstacleTypes obstacle)
 	//Set the current obstacle to the obstacle passed in. (from bp in startobstacle trigger)
 	CurrentObstacle = obstacle;
 
-	//Print Debug message to screen
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Started obstacle"));
 }
 
 //Function to tell the rail character that it has finished the obstacle it is on
-void ARailCharacter::EndObstacle()
+bool ARailCharacter::EndObstacle()
 {
 	//Calculate the total time taken for the obstacle so the percentage can be calculated later
 	float totalTime = ObstacleTimings.SmallTime + ObstacleTimings.MediumTime + ObstacleTimings.LargeTime;
 
 	//Set initial percentage to zero
 	float percentage = 0.0f;
+	bool passed = false;
 
 	//Calculate the percentage of time in the right state.
 	switch (CurrentObstacle)
@@ -55,20 +53,13 @@ void ARailCharacter::EndObstacle()
 	//If character was in right state for over 80% of the obstacle and is currently in the right state.
 	if ((percentage >= 0.5) && ((uint8)RailCharacterState == (uint8)CurrentObstacle))
 	{
-		//passed obstacle would be true (add logic)
-		//Print Debug message to screen
-		if (GEngine)
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Obstacle Passed"));
-	}
-	else
-	{
-		//Print Debug message to screen
-		if (GEngine)
-			GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Obstacle Failed"));
+		passed = true;
 	}
 
 	//Set the current obstacle to none
 	CurrentObstacle = EObstacleTypes::None;
+
+	return passed;
 }
 
 // Called when the game starts or when spawned

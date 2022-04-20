@@ -47,7 +47,7 @@ public:
 		void StartObstacle(EObstacleTypes obstacle);
 
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
-		void EndObstacle();
+		bool EndObstacle();
 
 protected:
 	// Called when the game starts or when spawned
