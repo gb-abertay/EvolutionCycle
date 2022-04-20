@@ -63,4 +63,35 @@ void ARailCharacter::CharacterMovement(float DeltaTime)
 		// Calculate distance covered
 		DistanceCovered = CurrentSpline->GetDistanceAlongSplineAtSplineInputKey(CurrentSpline->FindInputKeyClosestToWorldLocation(GetActorLocation()));
 	}
+
+}
+
+void ARailCharacter::ChangeStates(float AveragePower)
+{
+	if (IsBikeInputEnabled)
+	{
+		if (Speed <= 0.01)
+			RailCharacterState = ERailCharacterStates::IDLE;
+		else if (Speed > 0.01)
+		{ 
+			RailCharacterState = ERailCharacterStates::SMALL;
+			if (AveragePower >= 70)
+				RailCharacterState = ERailCharacterStates::MEDIUM;
+			if (AveragePower >= 120)
+				RailCharacterState = ERailCharacterStates::LARGE;
+		}
+	}
+	else
+	{
+		if (Speed <= 0.01)
+			RailCharacterState = ERailCharacterStates::IDLE;
+		else if (Speed > 0.01)
+		{
+			RailCharacterState = ERailCharacterStates::SMALL;
+			if (Speed >= 2000)
+				RailCharacterState = ERailCharacterStates::MEDIUM;
+			if (Speed >= 3500)
+				RailCharacterState = ERailCharacterStates::LARGE;
+		}
+	}
 }
