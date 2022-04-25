@@ -168,12 +168,3 @@ void ARailCharacter::ChangeStates(float AveragePower)
 		}
 	}
 }
-
-void ARailCharacter::Pause()
-{
-}
-
-void ARailCharacter::UnPause()
-{
-
-}

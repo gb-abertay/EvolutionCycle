@@ -73,12 +73,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void ChangeStates(float AveragePower);
 
-	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
-	void Pause();
-
-	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
-	void UnPause();
-
 
 public:	
 	// Called every frame
