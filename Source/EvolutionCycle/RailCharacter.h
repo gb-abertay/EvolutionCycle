@@ -69,8 +69,17 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void CharacterMovement(float DeltaTime, float AveragePower);
+
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void ChangeStates(float AveragePower);
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+	void Pause();
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+	void UnPause();
+
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -81,5 +90,4 @@ public:
 private:
 	EObstacleTypes CurrentObstacle;
 	FObstacleTimings ObstacleTimings;
-
 };
