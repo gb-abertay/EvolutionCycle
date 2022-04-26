@@ -875,6 +875,23 @@ void ASearchChannelActor::SetResistance(int resistance)
     }
 }
 
+void ASearchChannelActor::SetPower(int power)
+{
+    BOOL bStatus;
+
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = {0x31, 0,0,0,0,0,0x40,0x0B};
+    bStatus = pclMessageObject->SendBroadcastData(2, payload);
+
+    if (bStatus)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), 255);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to change TargetPower to %d"), 255);
+    }
+}
+
 bool ASearchChannelActor::CheckUSBConnection()
 {
     UCHAR aucDeviceDescription[USB_MAX_STRLEN];
