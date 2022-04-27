@@ -875,11 +875,31 @@ void ASearchChannelActor::SetResistance(int resistance)
     }
 }
 
+//Function to send instruction to FE-C changing it to Target Power mode, and send the target power in message.
 void ASearchChannelActor::SetPower(int power)
 {
     BOOL bStatus;
+    UCHAR LSB, MSB;
 
-    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = {0x31, 0,0,0,0,0,0x40,0x0B};
+    //Units: 1 = 0.25W 
+    //Range: 0-4000W
+    switch (power)
+    {
+    case 0:
+        LSB = 0xC8; MSB = 0x00; //50W
+        break;
+    case 1:
+        LSB = 0x90; MSB = 0x01; //100W
+        break;
+    case 2:
+        LSB = 0x20; MSB = 0x03; //200W
+        break;
+    case 3:
+        LSB = 0xB0; MSB = 0x04; //300W
+        break;
+    }
+
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,LSB,MSB };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
 
     if (bStatus)
