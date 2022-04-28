@@ -76,6 +76,9 @@ public:
      UFUNCTION(BlueprintCallable, Category = "Search")
         void SetResistance(int resistance);
 
+     UFUNCTION(BlueprintCallable, Category = "Search")
+        void SetPower(int power);
+
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         int SearchType;
 
