@@ -670,21 +670,12 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         }
                         break;
                     case 2:
-                        if (stMessage.aucData[0] == 0x19)
+                        if (stMessage.aucData[1] == 0x19)
                         {
-                            unsigned short usInstPower = stMessage.aucData[5];
-                            usInstPower += ((unsigned short)stMessage.aucData[6]) << 8;
+                            unsigned short usInstPower = stMessage.aucData[6];
+                            usInstPower += ((unsigned short)stMessage.aucData[7]) << 8;
                             AveragePower = usInstPower;
                         }
-                        UE_LOG(LogTemp, Warning, TEXT("Ch02 - %X,%X,%X,%X,%X,%X,%X,%X"),
-                            stMessage.aucData[0],
-                            stMessage.aucData[1],
-                            stMessage.aucData[2],
-                            stMessage.aucData[3],
-                            stMessage.aucData[4],
-                            stMessage.aucData[5],
-                            stMessage.aucData[6],
-                            stMessage.aucData[7]);
                         break;
                     case 3:
                         HeartRate = stMessage.aucData[ucDataOffset + 7];
