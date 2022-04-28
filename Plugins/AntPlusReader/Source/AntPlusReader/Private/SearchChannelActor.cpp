@@ -142,10 +142,10 @@ void ASearchChannelActor::Tick(float DeltaTime)
             (new FAutoDeleteAsyncTask<ConnectToUSBTask>(this, pclSerialObject))->StartBackgroundTask();
     }
 
-    if (PowerConnected)
+    if (PowerConnected && !TrainerConnected)
     {
         AveragePower = APower/2;
-        AverageCadence = ACadence/2;
+        //AverageCadence = ACadence/2;
         return;
     }
 }
@@ -617,8 +617,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
 
                     case 1:
                         // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
-                        
-                        UE_LOG(LogTemp, Warning, TEXT("hi"));
+                     
 
                         if (currentRxTime - previousRxTime >= 2)
                         {
@@ -671,6 +670,12 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         }
                         break;
                     case 2:
+                        if (stMessage.aucData[0] == 0x19)
+                        {
+                            unsigned short usInstPower = stMessage.aucData[5];
+                            usInstPower += ((unsigned short)stMessage.aucData[6]) << 8;
+                            AveragePower = usInstPower;
+                        }
                         UE_LOG(LogTemp, Warning, TEXT("Ch02 - %X,%X,%X,%X,%X,%X,%X,%X"),
                             stMessage.aucData[0],
                             stMessage.aucData[1],
@@ -872,6 +877,43 @@ void ASearchChannelActor::SetResistance(int resistance)
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Failed to change resistance to %d"), resistance);
+    }
+}
+
+//Function to send instruction to FE-C changing it to Target Power mode, and send the target power in message.
+void ASearchChannelActor::SetPower(int power)
+{
+    BOOL bStatus;
+    UCHAR LSB, MSB;
+
+    //Units: 1 = 0.25W 
+    //Range: 0-4000W
+    switch (power)
+    {
+    case 0:
+        LSB = 0xC8; MSB = 0x00; //50W
+        break;
+    case 1:
+        LSB = 0x90; MSB = 0x01; //100W
+        break;
+    case 2:
+        LSB = 0x20; MSB = 0x03; //200W
+        break;
+    case 3:
+        LSB = 0xB0; MSB = 0x04; //300W
+        break;
+    }
+
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,LSB,MSB };
+    bStatus = pclMessageObject->SendBroadcastData(2, payload);
+
+    if (bStatus)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), 255);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to change TargetPower to %d"), 255);
     }
 }
 

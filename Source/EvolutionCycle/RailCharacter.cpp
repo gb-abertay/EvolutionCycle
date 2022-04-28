@@ -106,7 +106,7 @@ void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 	// Increase speed based on average power
 	if (IsBikeInputEnabled)
 	{
-		Speed += AveragePower / 7;
+		Speed += AveragePower / 50;
 	}
 
 	if (Speed > 0)
@@ -131,7 +131,7 @@ void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 		SetActorRelativeRotation(NewRotation.Rotation());
 
 		// Speed Falloff
-		Speed -= (Speed / 400) + 0.5;
+		Speed -= (Speed / 250) + 0.5;
 		
 		// Calculate distance covered
 		DistanceCovered = CurrentSpline->GetDistanceAlongSplineAtSplineInputKey(CurrentSpline->FindInputKeyClosestToWorldLocation(GetActorLocation()));
