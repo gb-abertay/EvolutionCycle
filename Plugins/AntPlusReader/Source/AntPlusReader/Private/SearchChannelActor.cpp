@@ -142,10 +142,10 @@ void ASearchChannelActor::Tick(float DeltaTime)
             (new FAutoDeleteAsyncTask<ConnectToUSBTask>(this, pclSerialObject))->StartBackgroundTask();
     }
 
-    if (PowerConnected)
+    if (PowerConnected && !TrainerConnected)
     {
         AveragePower = APower/2;
-        AverageCadence = ACadence/2;
+        //AverageCadence = ACadence/2;
         return;
     }
 }
@@ -617,8 +617,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
 
                     case 1:
                         // In case we miss messages for 2 seconds or longer, we use the system time from the standard C time library to calculate rollovers
-                        
-                        UE_LOG(LogTemp, Warning, TEXT("hi"));
+                     
 
                         if (currentRxTime - previousRxTime >= 2)
                         {
@@ -671,6 +670,12 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         }
                         break;
                     case 2:
+                        if (stMessage.aucData[0] == 0x19)
+                        {
+                            unsigned short usInstPower = stMessage.aucData[5];
+                            usInstPower += ((unsigned short)stMessage.aucData[6]) << 8;
+                            AveragePower = usInstPower;
+                        }
                         UE_LOG(LogTemp, Warning, TEXT("Ch02 - %X,%X,%X,%X,%X,%X,%X,%X"),
                             stMessage.aucData[0],
                             stMessage.aucData[1],
