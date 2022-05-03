@@ -63,6 +63,12 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 	float Speed;
 	UPROPERTY(BlueprintReadWrite)
+	float PowerStateSmall;
+	UPROPERTY(BlueprintReadWrite)
+	float PowerStateMedium;
+	UPROPERTY(BlueprintReadWrite)
+	float PowerStateLarge;
+	UPROPERTY(BlueprintReadWrite)
 	bool IsBikeInputEnabled;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ERailCharacterStates RailCharacterState;

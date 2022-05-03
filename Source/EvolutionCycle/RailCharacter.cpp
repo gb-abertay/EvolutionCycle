@@ -12,7 +12,11 @@ ARailCharacter::ARailCharacter()
 	Speed = 0;
 	IsBikeInputEnabled = 0;
 	DistanceCovered = 0;
+	PowerStateSmall = 100;
+	PowerStateMedium = 200;
+	PowerStateLarge = 300;
 	CurrentObstacle = EObstacleTypes::None;
+	RailCharacterState = ERailCharacterStates::IDLE;
 }
 
 //Function to tell the rail character it start an obstacle and which specific type of obstacle is started.
@@ -147,10 +151,11 @@ void ARailCharacter::ChangeStates(float AveragePower)
 			RailCharacterState = ERailCharacterStates::IDLE;
 		else if (Speed > 0.01)
 		{ 
-			RailCharacterState = ERailCharacterStates::SMALL;
-			if (AveragePower >= 70)
+			if (AveragePower <= PowerStateSmall)
+				RailCharacterState = ERailCharacterStates::SMALL;
+			if (AveragePower >= (PowerStateSmall + PowerStateMedium) / 2 || AveragePower <= PowerStateMedium)
 				RailCharacterState = ERailCharacterStates::MEDIUM;
-			if (AveragePower >= 120)
+			if (AveragePower >= (PowerStateMedium + PowerStateLarge) / 2)
 				RailCharacterState = ERailCharacterStates::LARGE;
 		}
 	}
