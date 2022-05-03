@@ -19,6 +19,9 @@ extern "C" {
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
 #include <time.h>
 #include <algorithm>
 
@@ -894,6 +897,10 @@ void ASearchChannelActor::SetPower(int power)
         LSB = 0xB0; MSB = 0x04; //300W
         break;
     }
+
+    std::stringstream ss;
+    ss << std::setfill('0') << std::setw(4) << std::hex << power;
+    FString s = UTF8_TO_TCHAR(ss.str().c_str());
 
     UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,LSB,MSB };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
