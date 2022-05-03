@@ -19,6 +19,9 @@ extern "C" {
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
 #include <time.h>
 #include <algorithm>
 
@@ -673,7 +676,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                         if (stMessage.aucData[1] == 0x19)
                         {
                             unsigned short usInstPower = stMessage.aucData[6];
-                            usInstPower += ((unsigned short)stMessage.aucData[7]) << 8;
+                            usInstPower += ((unsigned short)stMessage.aucData[7] & 15) << 8;
                             AveragePower = usInstPower;
                         }
                         break;
@@ -763,6 +766,12 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                 }
                 break;
             case 2:
+                if (stMessage.aucData[1] == 0x19)
+                {
+                    unsigned short usInstPower = stMessage.aucData[6];
+                    usInstPower += ((unsigned short)stMessage.aucData[7]&15) << 8;
+                    AveragePower = usInstPower;
+                }
                 break;
             case 3:
                 HeartRate = stMessage.aucData[ucDataOffset + 7];
@@ -894,6 +903,10 @@ void ASearchChannelActor::SetPower(int power)
         LSB = 0xB0; MSB = 0x04; //300W
         break;
     }
+
+    //std::stringstream ss;
+    //ss << std::setfill('0') << std::setw(4) << std::hex << power;
+    //FString s = UTF8_TO_TCHAR(ss.str().c_str());
 
     UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,LSB,MSB };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
