@@ -884,40 +884,31 @@ void ASearchChannelActor::SetResistance(int resistance)
 void ASearchChannelActor::SetPower(int power)
 {
     BOOL bStatus;
-    UCHAR LSB, MSB;
 
     //Units: 1 = 0.25W 
     //Range: 0-4000W
-    switch (power)
-    {
-    case 0:
-        SetResistance(60);
-        return;
-    case 1:
-        LSB = 0x90; MSB = 0x01; //100W
-        break;
-    case 2:
-        LSB = 0x20; MSB = 0x03; //200W
-        break;
-    case 3:
-        LSB = 0xB0; MSB = 0x04; //300W
-        break;
+    int p = power * 4; //multiplied by four to get in 1watt = 1;
+
+    UCHAR bytes[2];
+    for (int i = 0; i < 2; i++) {
+        bytes[i] = (power >> (8 * i)) & 0xFF;
     }
 
-    //std::stringstream ss;
-    //ss << std::setfill('0') << std::setw(4) << std::hex << power;
-    //FString s = UTF8_TO_TCHAR(ss.str().c_str());
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("CHANGING POWER TO %i"), power));
+    }
 
-    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,LSB,MSB };
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,bytes[0],bytes[1] };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
 
     if (bStatus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), 255);
+        UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), power);
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to change TargetPower to %d"), 255);
+        UE_LOG(LogTemp, Warning, TEXT("Failed to change TargetPower to %d"), power);
     }
 }
 
