@@ -891,8 +891,8 @@ void ASearchChannelActor::SetPower(int power)
     switch (power)
     {
     case 0:
-        LSB = 0xC8; MSB = 0x00; //50W
-        break;
+        SetResistance(60);
+        return;
     case 1:
         LSB = 0x90; MSB = 0x01; //100W
         break;
