@@ -854,11 +854,24 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     if (bStatus)
     {
         UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+
+        switch (SearchType)
+        {
+        case 0:
+            PowerConnected = true;
+            break;
+        case 1:
+            TrainerConnected = true;
+            break;
+        case 2:
+            HeartConnected = true;
+        }
+
         return true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+        UE_LOG(LogTemp, Warning, TEXT("Failed to setup new channel with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
         return false;
     }
 }
