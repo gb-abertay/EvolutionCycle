@@ -897,24 +897,22 @@ void ASearchChannelActor::SetResistance(int resistance)
 void ASearchChannelActor::SetPower(int power)
 {
     BOOL bStatus;
+    UCHAR PowerBytes[2];
 
-    //Units: 1 = 0.25W 
-    //Range: 0-4000W
-    int p = power * 4; //multiplied by four to get in 1watt = 1;
+    //Split the power value into two seperate bytes. Multipliying the power by 4 to get in correct units (1 = 0.25 watts) (Max power 4000 watts)
+    PowerBytes[0] = (power * 4) & 0xFF;
+    PowerBytes[1] = ((power * 4) >> 8) & 0xFF;
 
-    UCHAR bytes[2];
-    for (int i = 0; i < 2; i++) {
-        bytes[i] = (power >> (8 * i)) & 0xFF;
-    }
-
-    if (GEngine)
+    /*if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("CHANGING POWER TO %i"), power));
-    }
+    }*/
 
-    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,bytes[0],bytes[1] };
+    //Set the payload message to be page 0x31 and set the last two bytes to be the MSB, and LSB of target power.
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,PowerBytes[0],PowerBytes[1] };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
 
+    //Check if the message was sent sucessfully
     if (bStatus)
     {
         UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), power);
