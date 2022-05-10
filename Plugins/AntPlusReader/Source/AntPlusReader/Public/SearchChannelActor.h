@@ -101,9 +101,6 @@ public:
         bool TrainerConnected;
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
-        bool HeartConnected;
-
-    UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
         TArray<FChannelID> FoundChannels;
 
     UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
@@ -142,9 +139,9 @@ private:
     BOOL bBroadcasting;
     BOOL bPowerDecoderInitialized;
     time_t previousRxTime;
-    USHORT DeviceNumber[3];
-    USHORT DeviceType[3];
-    USHORT TransmissionType[3];
+    USHORT DeviceNumber[2];
+    USHORT DeviceType[2];
+    USHORT TransmissionType[2];
     DSISerialGeneric* pclSerialObject;
     DSIFramerANT* pclMessageObject;
     UCHAR ucPowerOnlyUpdateEventCount;

@@ -100,10 +100,6 @@ void ASearchChannelActor::BeginPlay()
     DeviceType[1] = 17;
     TransmissionType[1] = 0;
 
-    DeviceNumber[2] = 0;
-    DeviceType[2] = 120;
-    TransmissionType[2] = 0;
-
     LoadChannelID(); //This loads the channel ID from save file, if there is no save file the value isn't touched, if there us device number is overwritten
 
     SearchType = -1;
@@ -112,13 +108,12 @@ void ASearchChannelActor::BeginPlay()
     NewDevice = false;
     PowerConnected = false;
     TrainerConnected = false;
-    HeartConnected = false;
 
     UE_LOG(LogTemp, Warning, TEXT("Ant Channel Search Initialised"));
 
     if (SetUpUSB()) //If Ant+ USB is set up
     {
-        for (int i = 0; i < 3; i++) //For each device
+        for (int i = 0; i < 2; i++) //For each device
         {
             if (DeviceNumber[i]) //If a device id was loaded
             {
@@ -138,6 +133,7 @@ void ASearchChannelActor::Tick(float DeltaTime)
 
     TimeElapsed += DeltaTime;
 
+    //Every second do a check for if the USB has been disconnected, if usb is disconnected start a thread to look check for if usb is reconnected.
     if ((TimeElapsed > 1) && IsUSBConnected)
     {
         TimeElapsed = 0;
@@ -145,10 +141,11 @@ void ASearchChannelActor::Tick(float DeltaTime)
             (new FAutoDeleteAsyncTask<ConnectToUSBTask>(this, pclSerialObject))->StartBackgroundTask();
     }
 
+    //If using Power Sensor set the average power and cadence from the static variables that store the values.
     if (PowerConnected && !TrainerConnected)
     {
         AveragePower = APower/2;
-        //AverageCadence = ACadence/2;
+        AverageCadence = ACadence/2;
         return;
     }
 }
@@ -863,8 +860,6 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
         case 1:
             TrainerConnected = true;
             break;
-        case 2:
-            HeartConnected = true;
         }
 
         return true;
@@ -878,9 +873,12 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
 
 void ASearchChannelActor::SetResistance(int resistance)
 {
+    if (!TrainerConnected)
+        return;
+
     BOOL bStatus;
 
-    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = {0x30, 0,0,0,0,0,0,resistance};
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x30, 0,0,0,0,0,0,resistance };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
 
     if (bStatus)
@@ -891,22 +889,21 @@ void ASearchChannelActor::SetResistance(int resistance)
     {
         UE_LOG(LogTemp, Warning, TEXT("Failed to change resistance to %d"), resistance);
     }
+
 }
 
 //Function to send instruction to FE-C changing it to Target Power mode, and send the target power in message.
 void ASearchChannelActor::SetPower(int power)
 {
+    if (!TrainerConnected)
+        return;
+
     BOOL bStatus;
     UCHAR PowerBytes[2];
 
     //Split the power value into two seperate bytes. Multipliying the power by 4 to get in correct units (1 = 0.25 watts) (Max power 4000 watts)
     PowerBytes[0] = (power * 4) & 0xFF;
     PowerBytes[1] = ((power * 4) >> 8) & 0xFF;
-
-    /*if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("CHANGING POWER TO %i"), power));
-    }*/
 
     //Set the payload message to be page 0x31 and set the last two bytes to be the MSB, and LSB of target power.
     UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,PowerBytes[0],PowerBytes[1] };
@@ -932,7 +929,6 @@ bool ASearchChannelActor::CheckUSBConnection()
         IsUSBConnected = false;
         PowerConnected = false;
         TrainerConnected = false;
-        HeartConnected = false;
         UE_LOG(LogTemp, Warning, TEXT("=========USB UNPLUGGED==========="));
         return false;
     }
@@ -967,8 +963,6 @@ bool ASearchChannelActor::CreateChannel(int i)
         case 1:
             TrainerConnected = true;
             break;
-        case 2:
-            HeartConnected = true;
         }
 
         return true;
@@ -1013,14 +1007,12 @@ void ASearchChannelActor::LoadChannelID()
 {
     FString SaveName;
 
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 2; i++)
     {
         if (i == 0)
             SaveName = TEXT("Power");
         else if (i == 1)
             SaveName = TEXT("Trainer");
-        else
-            SaveName = TEXT("Heart");
 
         // Retrieve and cast the USaveGame object to UMySaveGame.
         if (UMySaveGame* LoadedGame = Cast<UMySaveGame>(UGameplayStatics::LoadGameFromSlot(SaveName, i)))
@@ -1047,7 +1039,7 @@ FString ASearchChannelActor::SaveNameTranslator(int DevType)
         return TEXT("Power");
     if (DevType == 17)
         return TEXT("Trainer");
-    return TEXT("Heart");
+    return TEXT("ERROR");
 }
 
 int ASearchChannelActor::SaveSlotTranslator(int DevType)
@@ -1056,7 +1048,7 @@ int ASearchChannelActor::SaveSlotTranslator(int DevType)
         return 0;
     if (DevType == 17)
         return 1;
-    return 2;
+    return -1;
 }
 
 bool ASearchChannelActor::IsNewDevice(int DevNum, int DevType, int TransType)
