@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <deque>
+
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
 #include "Components/SplineComponent.h"
@@ -73,6 +75,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	ERailCharacterStates RailCharacterState;
 
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "RailCharacter")
+	void PauseGame();
+
+	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
+	void ResetFiveSecondSpeed();
+
 	UFUNCTION(BlueprintCallable, Category = "RailCharacter")
 	void CharacterMovement(float DeltaTime, float AveragePower);
 
@@ -90,4 +98,7 @@ public:
 private:
 	EObstacleTypes CurrentObstacle;
 	FObstacleTimings ObstacleTimings;
+
+	float TimeElapsed;
+	std::deque<float> FiveSecondSpeed;
 };
