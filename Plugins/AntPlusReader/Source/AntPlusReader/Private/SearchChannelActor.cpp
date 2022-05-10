@@ -854,11 +854,24 @@ bool ASearchChannelActor::CreateChannel(int DevID, int DevType, int TransType)
     if (bStatus)
     {
         UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+
+        switch (SearchType)
+        {
+        case 0:
+            PowerConnected = true;
+            break;
+        case 1:
+            TrainerConnected = true;
+            break;
+        case 2:
+            HeartConnected = true;
+        }
+
         return true;
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("New Channel setup with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
+        UE_LOG(LogTemp, Warning, TEXT("Failed to setup new channel with id %i/%i/%i"), DeviceNumber[type - 1], DeviceType[type - 1], TransmissionType[type - 1]);
         return false;
     }
 }
@@ -884,40 +897,29 @@ void ASearchChannelActor::SetResistance(int resistance)
 void ASearchChannelActor::SetPower(int power)
 {
     BOOL bStatus;
-    UCHAR LSB, MSB;
+    UCHAR PowerBytes[2];
 
-    //Units: 1 = 0.25W 
-    //Range: 0-4000W
-    switch (power)
+    //Split the power value into two seperate bytes. Multipliying the power by 4 to get in correct units (1 = 0.25 watts) (Max power 4000 watts)
+    PowerBytes[0] = (power * 4) & 0xFF;
+    PowerBytes[1] = ((power * 4) >> 8) & 0xFF;
+
+    /*if (GEngine)
     {
-    case 0:
-        SetResistance(60);
-        return;
-    case 1:
-        LSB = 0x90; MSB = 0x01; //100W
-        break;
-    case 2:
-        LSB = 0x20; MSB = 0x03; //200W
-        break;
-    case 3:
-        LSB = 0xB0; MSB = 0x04; //300W
-        break;
-    }
+        GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("CHANGING POWER TO %i"), power));
+    }*/
 
-    //std::stringstream ss;
-    //ss << std::setfill('0') << std::setw(4) << std::hex << power;
-    //FString s = UTF8_TO_TCHAR(ss.str().c_str());
-
-    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,LSB,MSB };
+    //Set the payload message to be page 0x31 and set the last two bytes to be the MSB, and LSB of target power.
+    UCHAR payload[ANT_STANDARD_DATA_PAYLOAD_SIZE] = { 0x31, 0,0,0,0,0,PowerBytes[0],PowerBytes[1] };
     bStatus = pclMessageObject->SendBroadcastData(2, payload);
 
+    //Check if the message was sent sucessfully
     if (bStatus)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), 255);
+        UE_LOG(LogTemp, Warning, TEXT("Changed TargetPower to %d"), power);
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("Failed to change TargetPower to %d"), 255);
+        UE_LOG(LogTemp, Warning, TEXT("Failed to change TargetPower to %d"), power);
     }
 }
 

@@ -164,6 +164,7 @@ void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 
 void ARailCharacter::ChangeStates(float AveragePower)
 {
+
 	if (IsBikeInputEnabled)
 	{
 		if (Speed <= 0.01)
@@ -182,6 +183,7 @@ void ARailCharacter::ChangeStates(float AveragePower)
 			if (AveragePower >= (PowerStateMedium + PowerStateLarge) / 2)
 			{
 				RailCharacterState = ERailCharacterStates::LARGE;
+
 			}
 		}
 	}
