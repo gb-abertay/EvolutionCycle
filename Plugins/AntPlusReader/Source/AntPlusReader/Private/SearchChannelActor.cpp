@@ -142,7 +142,7 @@ void ASearchChannelActor::Tick(float DeltaTime)
     }
 
     //If using Power Sensor set the average power and cadence from the static variables that store the values.
-    if (PowerConnected && !TrainerConnected)
+    if (PowerConnected)
     {
         AveragePower = APower/2;
         AverageCadence = ACadence/2;
@@ -672,6 +672,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
                     case 2:
                         if (stMessage.aucData[1] == 0x19)
                         {
+                            AverageCadence = stMessage.aucData[5];
                             unsigned short usInstPower = stMessage.aucData[6];
                             usInstPower += ((unsigned short)stMessage.aucData[7] & 15) << 8;
                             AveragePower = usInstPower;
@@ -765,6 +766,7 @@ void ASearchChannelActor::ProcessMessage(ANT_MESSAGE stMessage, USHORT usSize_)
             case 2:
                 if (stMessage.aucData[1] == 0x19)
                 {
+                    AverageCadence = stMessage.aucData[5];
                     unsigned short usInstPower = stMessage.aucData[6];
                     usInstPower += ((unsigned short)stMessage.aucData[7]&15) << 8;
                     AveragePower = usInstPower;
