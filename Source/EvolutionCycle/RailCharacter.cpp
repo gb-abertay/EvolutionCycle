@@ -129,7 +129,7 @@ void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 	// Increase speed based on average power
 	if (IsBikeInputEnabled)
 	{
-		Speed += AveragePower / 50;
+		Speed += sqrt(AveragePower);
 	}
 
 	if (Speed > 0)
