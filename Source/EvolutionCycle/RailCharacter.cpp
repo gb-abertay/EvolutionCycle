@@ -15,6 +15,7 @@ ARailCharacter::ARailCharacter()
 	PowerStateSmall = 100;
 	PowerStateMedium = 200;
 	PowerStateLarge = 300;
+	FiveSecondSpeed = {100, 100, 100, 100, 100};
 	CurrentObstacle = EObstacleTypes::None;
 	RailCharacterState = ERailCharacterStates::IDLE;
 }
@@ -96,6 +97,24 @@ void ARailCharacter::Tick(float DeltaTime)
 			break;
 		}
 	}
+
+	// Pause if player stops
+	TimeElapsed += DeltaTime;
+	if (TimeElapsed >= 1)
+	{
+		TimeElapsed = 0;
+		FiveSecondSpeed.pop_front();
+		FiveSecondSpeed.push_back(Speed);
+
+		float sum = 0;
+		for (auto it : FiveSecondSpeed)
+		{
+			sum += it;
+		}
+		sum /= 5;
+		if (sum <= 0.1)
+			PauseGame();
+	}
 }
 
 // Called to bind functionality to input
@@ -110,7 +129,7 @@ void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 	// Increase speed based on average power
 	if (IsBikeInputEnabled)
 	{
-		Speed += AveragePower / 50;
+		Speed += sqrt(AveragePower);
 	}
 
 	if (Speed > 0)
@@ -145,6 +164,7 @@ void ARailCharacter::CharacterMovement(float DeltaTime, float AveragePower)
 
 void ARailCharacter::ChangeStates(float AveragePower)
 {
+
 	if (IsBikeInputEnabled)
 	{
 		if (Speed <= 0.01)
@@ -152,11 +172,19 @@ void ARailCharacter::ChangeStates(float AveragePower)
 		else if (Speed > 0.01)
 		{ 
 			if (AveragePower <= PowerStateSmall)
+			{
 				RailCharacterState = ERailCharacterStates::SMALL;
+				return;
+			}
 			if (AveragePower >= (PowerStateSmall + PowerStateMedium) / 2 || AveragePower <= PowerStateMedium)
+			{
 				RailCharacterState = ERailCharacterStates::MEDIUM;
+			}
 			if (AveragePower >= (PowerStateMedium + PowerStateLarge) / 2)
+			{
 				RailCharacterState = ERailCharacterStates::LARGE;
+
+			}
 		}
 	}
 	else
@@ -172,4 +200,14 @@ void ARailCharacter::ChangeStates(float AveragePower)
 				RailCharacterState = ERailCharacterStates::LARGE;
 		}
 	}
+}
+
+void ARailCharacter::ResetFiveSecondSpeed()
+{
+	FiveSecondSpeed = { 100, 100, 100, 100, 100 };
+}
+
+void ARailCharacter::PauseGame_Implementation()
+{
+
 }
