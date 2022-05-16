@@ -226,11 +226,13 @@ bool ASearchChannelActor::Search(int DevType)
     return true;
 }
 
+//A getter function to check if there is currently a search ongoing for ANT+ devices.
 bool ASearchChannelActor::GetIsSearching()
 {
     return IsSearching;
 }
 
+//A setter function which takes in a boolean, and sets two relevent boolean variables to that value. Used for storing the current state of the USB's connection status.
 void ASearchChannelActor::SetIsUSBConnected(bool b)
 {
     IsUSBConnected = b;
@@ -903,7 +905,7 @@ void ASearchChannelActor::SetPower(int power)
     BOOL bStatus;
     UCHAR PowerBytes[2];
 
-    //Split the power value into two seperate bytes. Multipliying the power by 4 to get in correct units (1 = 0.25 watts) (Max power 4000 watts)
+    //Split the power value into two seperate bytes (MSB & LSB). Multipliying the power by 4 to get in correct units (1 = 0.25 watts) (Max power 4000 watts)
     PowerBytes[0] = (power * 4) & 0xFF;
     PowerBytes[1] = ((power * 4) >> 8) & 0xFF;
 
@@ -922,20 +924,24 @@ void ASearchChannelActor::SetPower(int power)
     }
 }
 
+//A check for if the ANT+ USB is currently connected, will return false if the USB is unplugged. And will return true if ANT+ USB is connect requiring no action to be done.
 bool ASearchChannelActor::CheckUSBConnection()
 {
+    //Variables used to recieve information from pclMessageObject Function
     UCHAR aucDeviceDescription[USB_MAX_STRLEN];
     UCHAR aucDeviceSerial[USB_MAX_STRLEN];
-    if (!pclMessageObject->GetDeviceUSBInfo(pclSerialObject->GetDeviceNumber(), aucDeviceDescription, aucDeviceSerial, USB_MAX_STRLEN))
-    {
-        IsUSBConnected = false;
-        PowerConnected = false;
-        TrainerConnected = false;
-        UE_LOG(LogTemp, Warning, TEXT("=========USB UNPLUGGED==========="));
-        return false;
-    }
-    return true;
 
+    //The function GetDeviceUSBInfo will return true if an USB is connected, will return false if no ANT+ USB is connected.
+    if (pclMessageObject->GetDeviceUSBInfo(pclSerialObject->GetDeviceNumber(), aucDeviceDescription, aucDeviceSerial, USB_MAX_STRLEN))
+        return true;
+
+    //If there isn't a USB connected 
+    IsUSBConnected = false;
+    PowerConnected = false;
+    TrainerConnected = false;
+    UE_LOG(LogTemp, Warning, TEXT("=========USB UNPLUGGED==========="));
+    return false;
+ 
 }
 
 bool ASearchChannelActor::CreateChannel(int i)
